@@ -130,7 +130,10 @@ Wave 5                                  └── T10 性能与发布
 | `apps/web/src/components/**`（其余） | T4 | — |
 | `apps/web/src/screens/GameScreen.tsx` | T4 | T3 只负责提供 `<WorldCanvas />` |
 | `packages/game-core/src/store/gameStore.ts` | T0 定接口，T4 实现 | T3 只读 store，禁止写入 |
-| `docs/design/**` | T1 | — |
+| `docs/design/DESIGN-SYSTEM.md` `preview.html` | T1 | — |
+| `docs/design/ASSETS.md` `assets-gallery.html` | T2 | T3/T4 只读 |
+| `scripts/check-assets.mjs` | T2 | 新增，零依赖；校验色值同源 + 物品全覆盖 |
+| `apps/web/src/world/assets/palette.ts` | T2 | T3 只读，用它取色，禁止自己写 hex |
 | `docs/content/**` | T6 | — |
 | `apps/api/**` | T8 | — |
 
@@ -252,17 +255,20 @@ export function itemSvgMarkup(id: string): string;                            //
 
 **目标**：做出星球这张「纸」上所有可见元素的矢量资产，并让物品贴纸能同时给 React 和 Pixi 用。
 
-**必须先读**：`docs/REDESIGN.md` §3.2、`apps/web/src/components/ItemIcon.tsx`（现 431 行 / 30 个几何形状）
+**必须先读**：`docs/REDESIGN.md` §3.2、`apps/web/src/components/ItemIcon.tsx`（现 431 行 / **39** 个几何形状，不是 30）
 
 **产出**
 - `apps/web/src/world/assets/` 下按元素分文件，全部纯 SVG 函数（接收 size 返回 markup），不要 `.svg` 静态文件：
   `planet.ts`（星球本体 + 大气虚线环）、`terrain.ts`（6–9 边地面斑块、山、石、坑）、`player.ts`（24×36 小人，四向 + 6 帧走路）、`props.ts`（坠毁点/垃圾山/集市废墟/洞窟四个地标）、`fog.ts`（未解锁扇区雾障）
 - 改造 `ItemIcon.tsx`，加 `itemSvgMarkup(id)` 出口，与 React 出口共用同一份形状数据
+  - **先修数据再加出口**：现有 `SHAPE_OF` 有 7 件物品查不到（`manual/lottery/antigrav/fuel/mood/poker/theoryfuel` 落进 `blob`），加出口会把 bug 复制到地面
+  - **只改本文件，不改调用方**：`CraftBench.tsx` / `ItemCard.tsx` / `Toast.tsx` 归 T4。保留 `icon + color` 可用，新增可选 `id`，禁止把 `id` 改成必填
 - 一份资产清单表（放 `docs/design/ASSETS.md`）：每个元素的名字、尺寸、色值、被谁引用
 
 **验收**
 - 所有元素在 `preview.html` 或独立测试页里能平铺展示
-- 物品贴纸在 28 单位和 36 单位两个尺寸下都清晰可辨（这是星球上的实际显示尺寸）
+- 物品贴纸**固定 32 世界单位**（2026-10-19 定案，放弃 28–36 区间：28 下 6 个形状发糊，36 与 40 的拾取半径打架，32 = `minSpacing` 恰好不重叠），39 个形状在该尺寸下全部清晰
+- 星球本体**不出纹理**，只提供 `PLANET` / `ATMOSPHERE_DASH` 常量，由 T3 用 Pixi `Graphics` 现画（避免 27MB 显存）
 - 小人的 4 向 × 6 帧全部存在，帧间差异肉眼可辨（不要复制造型凑数）
 - 无位图、无外部字体、无渐变
 

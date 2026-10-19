@@ -250,10 +250,16 @@ apps/web/src/world/assets/
 ### 5.2 ItemIcon 双出口（`components/ItemIcon.tsx`）
 
 ```ts
-/** React 侧 */
-export function ItemIcon(props: { id: string; size?: number; className?: string }): JSX.Element;
+/** React 侧。id 与 icon+color 两种形态都支持，id 优先；三处现网调用继续用 icon+color，不强制迁移。 */
+export function ItemIcon(props: {
+  id?: string;
+  icon?: string;
+  color?: StickerColor;
+  size?: number;
+  className?: string;
+}): JSX.Element;
 
-/** Pixi 侧：同一份形状数据渲染出的完整 <svg> 字符串 */
+/** Pixi 侧：同一份形状数据渲染出的完整 <svg> 字符串，颜色为字面 hex（CSS 变量在纹理路径必然失效） */
 export function itemSvgMarkup(id: string, size?: number): string;
 ```
 
@@ -340,6 +346,7 @@ pnpm --filter @haola/game-core test
 pnpm --filter @haola/game-core typecheck
 pnpm --filter @haola/web typecheck
 node scripts/smoke-build.mjs      # 需先构建 + 起 .preview 静态服务
+node scripts/check-assets.mjs     # 色值与 tokens.css 同源 + 60 件物品形状全覆盖
 ```
 
 任何一项红，不许合并。

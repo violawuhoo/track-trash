@@ -1,0 +1,20 @@
+{
+  "name": "track-trash",
+  "version": "0.1.0",
+  "private": true,
+  "description": "《好垃》—— 荒诞星球合成游戏。前后端分离，规则共享。",
+  "packageManager": "pnpm@9.15.4",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "pnpm --filter @haola/web dev",
+    "dev:api": "pnpm --filter @haola/api dev",
+    "build": "pnpm -r build",
+    "test": "pnpm -r test",
+    "typecheck": "pnpm -r typecheck"
+  },
+  "devDependencies": {
+    "playwright-core": "^1.64.1"
+  }
+}

@@ -1,0 +1,25 @@
+:root {
+  /* 色盘：奶油底 + 墨黑 + 五个荧光色，不新增 */
+  --cream: #f7f0e0;
+  --cream-deep: #ece1c9;
+  --ink: #1a1a1a;
+  --paper: #fffdf7;
+  --orange: #ff6b35;
+  --mint: #4ecdc4;
+  --purple: #9b6bff;
+  --pink: #ff8fab;
+  --yellow: #ffd166;
+
+  --font-body: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB',
+    'Microsoft YaHei', 'Source Han Sans SC', sans-serif;
+  --font-display: 'Arial Black', 'Helvetica Neue', 'PingFang SC', 'Microsoft YaHei',
+    sans-serif;
+
+  --stroke: 3px;
+  --radius: 16px;
+  --shadow: 4px 4px 0 var(--ink);
+  --shadow-sm: 2px 2px 0 var(--ink);
+  --gap: 10px;
+
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}

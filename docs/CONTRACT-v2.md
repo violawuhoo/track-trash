@@ -115,7 +115,9 @@ export function distribute(opts: DistributeOptions): PlacedItem[];
    - `needs = missingForBag(progress, bag)`，取前 2 个标签。
    - 对每个 `need`：若**已解锁区域池**中存在带该标签的物品，则返回结果里必须至少有 1 个该标签物品的地面点。
    - 该点必须满足：在已解锁扇区内、`r ≤ itemRadius`、距 `player` ≤ `maxDist`。
+   - **距离放宽规则（T5 实现时确定）**：当角色离所有已解锁扇区都超过 `maxDist`（几何上够不到）时，退化为「最近合法点」，但**必须仍在已解锁扇区内**。此时由 HUD 的方向箭头兜底引导，不允许把保底点扔进未解锁区域。
    - 若整个星球池里都不存在该标签 → `throw new Error(...)`，开发期暴露配置错误。
+   - **重复标签不翻倍**：`resolveMix` 用 `Set` 求标签并集，`requires: ['实体','实体']` 与 `['实体']` 等价。因此保底只需 1 个该标签物品，不需要两个。这是刻意的，别「修正」成两份。
 3. **间距**：任意两点欧氏距离 ≥ `minSpacing`。
 4. **确定性**：同一 `rng` 序列 + 同一入参，两次调用结果深度相等（含 `uid`）。
 5. **不重叠角色**：新生成点距 `player` ≥ `pickupRadius * 2`，避免走一步就连环自动拾取。

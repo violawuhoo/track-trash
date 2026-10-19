@@ -79,7 +79,7 @@ export const ITEMS: Item[] = [
   { id: 'halfplan', name: '半个计划', desc: '前半段很清晰，后半段是「然后就……」。', tags: ['意外', '知识'], kind: 'accident', color: 'mint', icon: 'map' },
   { id: 'gum', name: '外星口香糖', desc: '嚼起来有星尘味。吐出来会自己爬回去。', tags: ['意外', '外星', '粘'], kind: 'accident', color: 'pink', icon: 'gum' },
   { id: 'opttape', name: '乐观胶带', desc: '粘性一般，但每次粘东西都会说「应该能行」。', tags: ['意外', '抽象', '粘'], kind: 'accident', color: 'yellow', icon: 'tape2' },
-  { id: 'wastepaper', name: '一页废纸', desc: '两面印着同一段话。内容不重要，重要的是它很干净。', tags: ['意外', '知识'], kind: 'accident', color: 'mint', icon: 'paper' },
+  { id: 'wastepaper', name: '一页废纸', desc: '两面印着同一段话。内容不重要，重要的是它很干净。', tags: ['意外', '知识'], kind: 'accident', color: 'mint', icon: 'page' },
   { id: 'alienink', name: '外星笔迹', desc: '看起来像数学，读起来像诗，用起来像废纸。', tags: ['意外', '外星', '知识'], kind: 'accident', color: 'purple', icon: 'scribble' },
   { id: 'halfget', name: '懂了但没完全懂', desc: '你知道它在说什么，但不知道它为什么要说。', tags: ['意外', '抽象'], kind: 'accident', color: 'mint', icon: 'question' },
   { id: 'unclear2', name: '更说不清的东西', desc: '比说不清的东西多一个把手。', tags: ['意外', '外星'], kind: 'accident', color: 'purple', icon: 'blob2' },

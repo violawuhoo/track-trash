@@ -194,15 +194,31 @@ interface GameStore {
 ### 4.1 组件边界
 
 ```tsx
-// apps/web/src/world/WorldCanvas.tsx
+// apps/web/src/world/WorldCanvas.tsx（以 T3 实际实现为准）
 export interface WorldCanvasProps {
-  /** 仅用于样式定位，不传业务数据 */
+  /** 只用于样式定位。必须给元素一个确定尺寸（世界层不猜布局） */
   className?: string;
+  /** 地面物品。同一次渲染内不要新建数组，否则每帧都会走一遍 sync */
+  items: readonly PlacedItem[];
+  /** 角色的权威位置（初次挂载 + 外部跳转）。位移由世界层积分 */
+  player: Vec2;
+  /** 点击地面：世界坐标（已夹进可走圆）。接到 store.setMoveTarget */
+  onMoveTo?: (x: number, y: number) => void;
+  /** 走进拾取半径：物品 uid。接到 store.collect */
+  onCollect?: (uid: string) => void;
+  /** 走进未解锁扇区（被挡住）。接到 store 的 blockedArea 并出台词 */
+  onAreaBlocked?: (area: AreaId) => void;
+  /** 每帧上报一次位置。接到 store.setPlayerPos（内部不得持久化） */
+  onPlayerPos?: (x: number, y: number) => void;
+  /** 缩放。缺省保持上一次的值，范围 0.8–1.6 */
+  zoom?: number;
+  /** 未解锁区域（画雾障 + 挡人）。缺省 [] = 全部解锁 */
+  lockedAreas?: readonly AreaId[];
 }
 export function WorldCanvas(props: WorldCanvasProps): JSX.Element;
 ```
 
-WorldCanvas **自己订阅 store**，不接受 `world` / `player` 之类的 props。理由：世界层每帧变化，走 props 会让 React 每帧重渲染。
+WorldCanvas **不走每帧 props**：`items` / `player` / `lockedAreas` 只在值变化时作为同步入口（世界层内部做引用/浅比较，变了才 sync），每帧的位移在世界层内用 ticker 积分，再经 `onPlayerPos` 一次性上报。理由：世界层每帧变化，走 React props 会让 React 每帧重渲染。
 
 ### 4.2 分层（`layers.ts`）
 

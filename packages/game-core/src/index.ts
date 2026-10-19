@@ -70,6 +70,18 @@ export {
   type DialogueKey,
 } from './dialogue';
 export {
+  WORLD,
+  areaOfPoint,
+  clampToWalkable,
+  distribute,
+  isWalkable,
+  sectorCenter,
+  toPolar,
+  type DistributeOptions,
+  type PlacedItem,
+  type Vec2,
+} from './world';
+export {
   MAX_LOG,
   SCHEMA_VERSION,
   addItem,

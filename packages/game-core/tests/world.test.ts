@@ -325,13 +325,13 @@ describe('硬保底（确定性补齐，不是概率）', () => {
     }
   });
 
-  it('stage 2 缺「实体」时必定有一个实体物品（重复需求补两个）', () => {
+  it('stage 2 缺「实体」时必定有一个实体物品', () => {
     for (let seed = 1; seed <= 20; seed++) {
       const world = run(2, 0, {}, seed);
       expect(hasTagWithin(world, '实体', 400), `seed ${seed}`).toBe(true);
-      // 第 1 步是「实体 + 实体」，需要两个不同的地面点
+      // 重复标签不翻倍：['实体','实体'] 用并集判定，只需 1 个（CONTRACT-v2 §2.3）
       const count = world.filter((it) => tagsOf(it.id).includes('实体')).length;
-      expect(count, `seed ${seed}`).toBeGreaterThanOrEqual(2);
+      expect(count, `seed ${seed}`).toBeGreaterThanOrEqual(1);
     }
   });
 
@@ -351,6 +351,29 @@ describe('硬保底（确定性补齐，不是概率）', () => {
       );
       expect(ok, tag).toBe(true);
     }
+  });
+
+  it('几何上够不到 maxDist 时退化为最近合法点，且不越界到锁定区', () => {
+    const edge = { x: WORLD.center.x + 590, y: WORLD.center.y };
+    const world = distribute({
+      progress: { stage: 1, stepIndex: 0 },
+      bag: {},
+      day: 8,
+      rng: mulberry32(77),
+      player: edge,
+      // crash 圆盘最近也在 390 外，maxDist=200 几何上不可达
+      maxDist: 200,
+    });
+
+    const sticky = world.filter((it) => tagsOf(it.id).includes('粘'));
+    expect(sticky.length).toBeGreaterThan(0);
+    for (const it of sticky) {
+      expect(it.area).toBe('crash');
+      expect(toPolar(it).r).toBeLessThanOrEqual(200 + 1e-6);
+    }
+    // 理论最近 390（角色 r=590，crash 边 r=200 同向），退化成最近点而不是随便扔一个
+    const nearest = Math.min(...sticky.map((it) => dist(it, edge)));
+    expect(nearest).toBeLessThanOrEqual(420);
   });
 
   it('保底物品必须落在已解锁区域（stage 1 不能出现在其它区域）', () => {
@@ -542,20 +565,27 @@ function simulate(seed: number): SimResult {
       continue;
     }
 
-    // 还差哪个标签
-    const needTag: Tag =
-      rep0 === undefined ? r0 : rep1 === undefined ? r1 : r0;
+    // 还差哪个标签。null 表示「同一物品覆盖了全部标签但只有一个，再来任意一个就能合」
+    let needTag: Tag | null = null;
+    if (rep0 === undefined) needTag = r0;
+    else if (rep1 === undefined) needTag = r1;
 
     let pick = -1;
-    for (let i = 0; i < world.length; i++) {
-      if (TAG_SETS.get(world[i]!.id)!.has(needTag)) {
-        pick = i;
-        break;
+    if (needTag === null) {
+      pick = world.length > 0 ? 0 : -1;
+    } else {
+      for (let i = 0; i < world.length; i++) {
+        if (TAG_SETS.get(world[i]!.id)!.has(needTag)) {
+          pick = i;
+          break;
+        }
       }
     }
     if (pick < 0) {
       throw new Error(
-        `seed ${seed}: 阶段 ${stage} 第 ${stepIndex} 步，地面没有带「${needTag}」的可推进物品`,
+        `seed ${seed}: 阶段 ${stage} 第 ${stepIndex} 步，地面没有${
+          needTag === null ? '可用的' : `带「${needTag}」的`
+        }可推进物品`,
       );
     }
 

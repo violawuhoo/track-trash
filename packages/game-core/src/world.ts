@@ -369,29 +369,63 @@ export function distribute(opts: DistributeOptions): PlacedItem[] {
     return null;
   };
 
-  /** 确定性兜底扫描：随机采样找不到时用，保证数量下限 */
-  const scanSpot = (area: AreaId, limit: number | null): Vec2 | null => {
+  /**
+   * 确定性兜底扫描：随机采样找不到时用，保证数量下限。
+   * nearest=true 时扫完整片区域，取离角色最近的合法点（距离放宽时用）。
+   */
+  const scanSpot = (
+    area: AreaId,
+    limit: number | null,
+    nearest = false,
+  ): Vec2 | null => {
+    let best: Vec2 | null = null;
+    let bestSq = Infinity;
+
+    const visit = (x: number, y: number): boolean => {
+      const rx = round2(x);
+      const ry = round2(y);
+      if (!acceptable(rx, ry, area, limit)) return false;
+      if (!nearest || !player) {
+        best = { x: rx, y: ry };
+        return true;
+      }
+      const dx = rx - player.x;
+      const dy = ry - player.y;
+      const dSq = dx * dx + dy * dy;
+      if (dSq < bestSq) {
+        bestSq = dSq;
+        best = { x: rx, y: ry };
+      }
+      return false;
+    };
+
     if (area === 'crash') {
       for (let r = CRASH_RADIUS; r >= 0; r -= 20) {
         const steps = Math.max(8, Math.ceil((2 * Math.PI * Math.max(r, 1)) / 40));
         for (let i = 0; i < steps; i++) {
           const a = (i / steps) * Math.PI * 2;
-          const rx = round2(WORLD.center.x + r * Math.cos(a));
-          const ry = round2(WORLD.center.y + r * Math.sin(a));
-          if (acceptable(rx, ry, area, limit)) return { x: rx, y: ry };
+          if (visit(WORLD.center.x + r * Math.cos(a), WORLD.center.y + r * Math.sin(a))) {
+            return best;
+          }
         }
       }
-      return null;
+      return best;
     }
+
     for (let r = SECTOR_INNER; r <= SECTOR_OUTER; r += 20) {
       for (let d = -SECTOR_HALF_DEG + 1; d <= SECTOR_HALF_DEG - 1; d += 4) {
         const rad = ((SECTOR_DEG[area] + d) * Math.PI) / 180;
-        const rx = round2(WORLD.center.x + r * Math.cos(rad));
-        const ry = round2(WORLD.center.y + r * Math.sin(rad));
-        if (acceptable(rx, ry, area, limit)) return { x: rx, y: ry };
+        if (
+          visit(
+            WORLD.center.x + r * Math.cos(rad),
+            WORLD.center.y + r * Math.sin(rad),
+          )
+        ) {
+          return best;
+        }
       }
     }
-    return null;
+    return best;
   };
 
   // ── 1. 目标数量 12–18 ──
@@ -404,17 +438,18 @@ export function distribute(opts: DistributeOptions): PlacedItem[] {
     ),
   );
 
-  // ── 2. 硬保底：缺的标签，地面必须至少有一个（同标签出现两次就补两个） ──
-  const needs = missingForBag(progress, bag).slice(0, 2);
+  // ── 2. 硬保底：缺的标签，地面必须至少有一个 ──
+  // 重复标签不翻倍：resolveMix 用标签并集判定，['实体','实体'] 等价于 ['实体']，
+  // 只需 1 个带该标签的物品（见 CONTRACT-v2 §2.3）。
+  const needs = Array.from(
+    new Set(missingForBag(progress, bag).slice(0, 2)),
+  );
 
-  const needCount = new Map<Tag, number>();
-  for (const tag of needs) needCount.set(tag, (needCount.get(tag) ?? 0) + 1);
-
-  for (const [tag, required] of needCount) {
+  for (const tag of needs) {
     let have = 0;
     for (const it of result) if (ITEM_MAP[it.id]?.tags.includes(tag)) have++;
 
-    while (have < required) {
+    while (have < 1) {
       const areas = unlocked
         .map((area) => ({ area, ids: idsWithTag(area, tag) }))
         .filter((c) => c.ids.length > 0);
@@ -443,14 +478,22 @@ export function distribute(opts: DistributeOptions): PlacedItem[] {
         }
       }
 
-      // 几何上够不到（角色离已解锁区域太远）时放宽距离，仍然留在已解锁扇区内
+      // 几何上够不到（角色离已解锁区域太远）时放宽距离：
+      // 退化为「最近合法点」，但仍然留在已解锁扇区内
       if (!spot || !chosen) {
         for (const c of order) {
-          const s = findSpot(c.area, null, 48) ?? scanSpot(c.area, null);
-          if (s) {
+          const s = scanSpot(c.area, null, true);
+          if (!s) continue;
+          if (!spot) {
             spot = s;
             chosen = c.area;
-            break;
+          } else if (player) {
+            const dNew = (s.x - player.x) ** 2 + (s.y - player.y) ** 2;
+            const dOld = (spot.x - player.x) ** 2 + (spot.y - player.y) ** 2;
+            if (dNew < dOld) {
+              spot = s;
+              chosen = c.area;
+            }
           }
         }
       }

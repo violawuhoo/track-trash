@@ -42,13 +42,16 @@ pnpm --filter @haola/web typecheck
 4. 阶段 3 支线按**具体物品 id** 判定，不用标签匹配
 5. 前端断网必须能完整通关
 
-**当前状态**
+**当前状态**（2026-10-19 16:45 更新）
+
 | 部分 | 状态 |
 |---|---|
-| `packages/game-core` | ✅ 60 件物品 / 24 条精确配方 / 11 条意外配对 / 3 阶段 6 步链 / 3 支线 / 起飞判定；39 测试全绿；1000 随机种子通关 |
-| `apps/web` | ✅ v1 区域搜索版可玩（开始页 / 主界面 / 结局页 / localStorage 存档） |
-| v2 世界层 | ❌ 零代码，只有 `docs/REDESIGN.md` 规格 |
+| `packages/game-core` | ✅ 60 件物品 / 24 条精确配方 / 11 条意外配对 / 3 阶段 6 步链 / 3 支线 / 起飞判定；**T5 `world.ts` 空间分布与硬保底已实现并提交**（`6eb2cfe`、`017e2f9`），5 测试文件 / 60 用例（含 world 21 条与 10 万次模拟） |
+| `apps/web` | ✅ v1 区域搜索版可玩（开始页 / 主界面 / 结局页 / localStorage 存档）；**T1 设计系统已交付**（`tokens.css` 116 令牌 + `docs/design/DESIGN-SYSTEM.md` + `preview.html`） |
+| v2 世界层 | 🟡 T0 契约 + T5 规则完成；`apps/web/src/world/*` 骨架已建但仍是 `throw`，**T3 渲染 / T4 界面未开工**；T2 美术资产未开工 |
 | `apps/api` | ❌ 未开工 |
+
+> 注：测试基线受沙箱 `EPERM` 影响会静默丢文件（退出码仍为 0），验收必须核对「5 文件 / 60 用例」，不能只看 exit code。
 
 **两份规格**
 - `docs/SPEC.md` v1.0：后端、部署、CI 部分继续有效
@@ -289,7 +292,7 @@ export function itemSvgMarkup(id: string): string;                            //
 - `sprites.ts`：调 `itemSvgMarkup()` 生成纹理并缓存（同一物品只生成一次）
 
 **验收**
-- 小人从星球左边缘走出去，从右边缘回来（水平环绕）
+- 小人走到星球边缘即停住，**不做水平回绕**（`CONTRACT-v2.md` §9 已否决回绕：圆形星球 + 方形世界 + 取模回绕几何上自相矛盾）
 - 上下走到极地停住，不越界
 - 连续移动 60 秒，中端安卓（或 Chrome CPU 4× 降速）帧率不低于 50
 - 切到后台再回来不黑屏、不重复创建 canvas

@@ -48,7 +48,7 @@ pnpm --filter @haola/web typecheck
 |---|---|
 | `packages/game-core` | ✅ 60 件物品 / 24 条精确配方 / 11 条意外配对 / 3 阶段 6 步链 / 3 支线 / 起飞判定；**T5 `world.ts` 空间分布与硬保底已实现并提交**（`6eb2cfe`、`017e2f9`），5 测试文件 / 60 用例（含 world 21 条与 10 万次模拟） |
 | `apps/web` | ✅ v1 区域搜索版可玩（开始页 / 主界面 / 结局页 / localStorage 存档）；**T1 设计系统已交付**（`tokens.css` 116 令牌 + `docs/design/DESIGN-SYSTEM.md` + `preview.html`） |
-| v2 世界层 | 🟡 T0 契约 + T5 规则完成；`apps/web/src/world/*` 骨架已建但仍是 `throw`，**T3 渲染 / T4 界面未开工**；T2 美术资产未开工 |
+| v2 世界层 | 🟢 T0 契约 + T5 规则 + T2 美术资产（批 0 `07c5c4c`、批 1 地形 `1ac2c7c`）+ T3 Pixi 世界层（`68cac73`：五层容器/相机/输入/地形摆放/雾障）已提交；**T4 界面接线未开工** |
 | `apps/api` | ❌ 未开工 |
 
 > 注：测试基线受沙箱 `EPERM` 影响会静默丢文件（退出码仍为 0），验收必须核对「5 文件 / 60 用例」，不能只看 exit code。

@@ -1,0 +1,1557 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>《好垃》设计系统样张 v2.0</title>
+<style>
+/* ==========================================================================
+   TOKENS-COPY BEGIN
+   下面这段是 apps/web/src/styles/tokens.css 的 :root 副本：
+   变量名与取值必须逐个相等（注释可以简写），改令牌时两边同时改。
+   本文件不参与构建，只用于设计评审与截图。
+   ========================================================================== */
+:root {
+  /* 1. 色彩 · 基础色盘（v1 冻结） */
+  --cream: #f7f0e0;
+  --cream-deep: #ece1c9;
+  --ink: #1a1a1a;
+  --paper: #fffdf7;
+  --orange: #ff6b35;
+  --mint: #4ecdc4;
+  --purple: #9b6bff;
+  --pink: #ff8fab;
+  --yellow: #ffd166;
+
+  /* 2. 色彩 · 世界中性阶 */
+  --space: var(--cream-deep);
+  --planet: var(--paper);
+  --planet-shade: #f1e6d0;
+  --void: rgba(26, 26, 26, 0.35);
+
+  /* 3. 色彩 · 文字与分隔 */
+  --ink-soft: rgba(26, 26, 26, 0.62);
+  --ink-faint: rgba(26, 26, 26, 0.5);
+  --rule: rgba(26, 26, 26, 0.15);
+  --scrim: rgba(26, 26, 26, 0.55);
+
+  /* 4. 字体 */
+  --font-body: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB',
+    'Microsoft YaHei', 'Source Han Sans SC', sans-serif;
+  --font-display: 'Arial Black', 'Helvetica Neue', 'PingFang SC', 'Microsoft YaHei',
+    sans-serif;
+
+  /* 5. 字号阶与行高 */
+  --fs-display: clamp(64px, 22vw, 96px);
+  --fs-ending: clamp(36px, 12vw, 54px);
+  --fs-h2: 22px;
+  --fs-h3: 19px;
+  --fs-body: 16px;
+  --fs-sm: 14px;
+  --fs-xs: 13px;
+  --fs-2xs: 12px;
+  --fs-nano: 11px;
+
+  --lh-display: 0.92;
+  --lh-tight: 1.2;
+  --lh-ui: 1.4;
+  --lh-body: 1.7;
+
+  --ls-tight: -0.03em;
+  --ls-label: 0.16em;
+  --ls-kicker: 0.28em;
+  --ls-stamp: 0.3em;
+
+  /* 6. 间距阶 */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+  --sp-6: 24px;
+  --sp-8: 32px;
+  --sp-10: 40px;
+  --sp-12: 48px;
+  --sp-16: 64px;
+  --sp-20: 80px;
+  --sp-24: 96px;
+
+  /* 7. 圆角阶 */
+  --radius: 16px;
+  --radius-ui: var(--radius);
+  --radius-xs: 10px;
+  --radius-sm: 12px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-xl: 22px;
+  --radius-pill: 999px;
+
+  /* 8. 描边与投影 */
+  --stroke: 3px;
+  --stroke-thin: 2px;
+  --stroke-hair: 1px;
+
+  --shadow: 4px 4px 0 var(--ink);
+  --shadow-sm: 2px 2px 0 var(--ink);
+  --shadow-press: 1px 1px 0 var(--ink);
+  --shadow-sheet: 6px 6px 0 var(--ink);
+  --shadow-item: 0 3px 0 var(--planet-shade);
+
+  /* 9. 状态色 */
+  --state-selected: var(--mint);
+  --danger-bg: var(--ink);
+  --danger-edge: var(--orange);
+  --danger-text: var(--paper);
+  --danger-soft-bg: var(--pink);
+  --danger-soft-edge: var(--ink);
+
+  /* 10. 层级 */
+  --z-world: 0;
+  --z-ground: 1;
+  --z-items: 2;
+  --z-actors: 3;
+  --z-fx: 4;
+  --z-grain: 30;
+  --z-hud: 40;
+  --z-hint: 45;
+  --z-dialogue: 50;
+  --z-drawer: 100;
+  --z-toast: 200;
+  --z-sheet: 300;
+
+  /* 11. 动效 */
+  --dur-1: 90ms;
+  --dur-2: 180ms;
+  --dur-3: 260ms;
+  --dur-4: 400ms;
+  --dur-loop: 1200ms;
+
+  --ease-out: cubic-bezier(0.2, 0.8, 0.3, 1);
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --ease-linear: linear;
+
+  /* 12. 尺寸 */
+  --tap-min: 44px;
+  --btn-h: 46px;
+  --hud-h: 36px;
+  --dialogue-h-collapsed: 44px; /* 1 行 14px/1.7 + padding 16 + 边框 3 = 42.8 */
+  --dialogue-h-expanded: 80px; /* 2 行 14px/1.7 + padding 24 + 边框 3 = 74.6，取 80 */
+  --pick-btn: 56px;
+  --item-card-w: 84px;
+  --item-card-w-narrow: 76px;
+  --item-icon-card: 40px;
+  --item-world: 32px;
+  --item-world-min: 28px;
+  --item-world-max: 36px;
+  --avatar: 34px;
+  --player-w: 24px;
+  --player-h: 36px;
+  --slot-h: 62px;
+  --drawer-w: 420px;
+  --sidebar-w: 320px;
+  --shell-max: 560px;
+
+  --focus-ring: 3px solid var(--ink);
+  --focus-offset: 2px;
+
+  /* 13. 旧令牌 */
+  --gap: 10px;
+
+  /* 14. 安全区 */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-1: 1ms;
+    --dur-2: 1ms;
+    --dur-3: 1ms;
+    --dur-4: 1ms;
+    --dur-loop: 1ms;
+  }
+}
+/* ==========================================================================
+   TOKENS-COPY END
+   ========================================================================== */
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: var(--sp-4);
+  background: var(--cream);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+  -webkit-text-size-adjust: 100%;
+}
+
+.wrap {
+  max-width: 1080px;
+  margin: 0 auto;
+  min-width: 0;
+}
+
+.page-head {
+  border: var(--stroke) solid var(--ink);
+  border-radius: var(--radius-ui);
+  background: var(--paper);
+  box-shadow: var(--shadow);
+  padding: var(--sp-4);
+  margin-bottom: var(--sp-4);
+}
+
+.page-head__kicker {
+  font-size: var(--fs-nano);
+  letter-spacing: var(--ls-kicker);
+  text-transform: uppercase;
+  font-weight: 800;
+  color: var(--ink-soft);
+}
+
+.page-head__title {
+  font-family: var(--font-display);
+  font-size: var(--fs-h2);
+  line-height: var(--lh-tight);
+  margin: var(--sp-1) 0;
+}
+
+.page-head__desc {
+  margin: 0;
+  font-size: var(--fs-xs);
+  color: var(--ink-soft);
+}
+
+.overflow {
+  margin-top: var(--sp-3);
+  padding: var(--sp-2) var(--sp-3);
+  border: var(--stroke-thin) dashed var(--ink);
+  border-radius: var(--radius-sm);
+  font-size: var(--fs-xs);
+  background: var(--cream);
+  overflow-wrap: anywhere;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+  gap: var(--sp-4);
+}
+
+.card {
+  min-width: 0;
+  background: var(--paper);
+  border: var(--stroke) solid var(--ink);
+  border-radius: var(--radius-ui);
+  box-shadow: var(--shadow-sm);
+  padding: var(--sp-4);
+  margin-bottom: var(--sp-4);
+}
+
+.grid .card {
+  margin-bottom: 0;
+}
+
+.card > h2 {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-2);
+  margin: 0 0 var(--sp-3);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-ui);
+}
+
+.card__no {
+  font-family: var(--font-display);
+  font-size: var(--fs-2xs);
+  letter-spacing: var(--ls-label);
+  color: var(--ink-soft);
+}
+
+.note {
+  font-size: var(--fs-xs);
+  line-height: var(--lh-body);
+  color: var(--ink-soft);
+  margin: var(--sp-3) 0 0;
+}
+
+.note strong {
+  color: var(--ink);
+}
+
+.rule-box {
+  margin-top: var(--sp-3);
+  padding: var(--sp-3);
+  border: var(--stroke-thin) solid var(--ink);
+  border-radius: var(--radius-sm);
+  background: var(--cream);
+  font-size: var(--fs-xs);
+}
+
+.rule-box b {
+  font-size: var(--fs-sm);
+}
+
+/* ── 色板 ── */
+.swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+}
+
+.swatch {
+  flex: 1 1 112px;
+  min-width: 0;
+  border: var(--stroke-thin) solid var(--ink);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: var(--paper);
+}
+
+.swatch__chip {
+  height: 52px;
+  border-bottom: var(--stroke-thin) solid var(--ink);
+}
+
+.swatch__meta {
+  padding: var(--sp-1) var(--sp-2) var(--sp-2);
+  font-size: var(--fs-nano);
+  line-height: var(--lh-ui);
+}
+
+.swatch__name {
+  font-weight: 800;
+  display: block;
+}
+
+.swatch__use {
+  color: var(--ink-soft);
+  display: block;
+}
+
+/* ── 世界 ── */
+.world-mock {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 180px;
+  padding: var(--sp-4);
+  background: var(--space);
+  border: var(--stroke-thin) solid var(--ink);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.planet-mock {
+  width: 120px;
+  height: 120px;
+  flex: 0 0 auto;
+  border-radius: var(--radius-pill);
+  background: var(--planet);
+  border: var(--stroke) solid var(--ink);
+  outline: var(--stroke-hair) dashed var(--ink);
+  outline-offset: var(--sp-2);
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.planet-mock__patch {
+  width: 42px;
+  height: 26px;
+  background: var(--planet-shade);
+  border-radius: 40% 60% 55% 45%;
+  transform: rotate(-12deg);
+}
+
+.planet-mock__fog {
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius-pill);
+  background: var(--void);
+  clip-path: polygon(50% 0, 100% 0, 100% 55%, 50% 65%);
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  margin-top: var(--sp-3);
+  font-size: var(--fs-nano);
+  color: var(--ink-soft);
+}
+
+/* ── 文字阶 ── */
+.text-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  padding: var(--sp-2) 0;
+  border-bottom: var(--stroke-hair) dashed var(--rule);
+}
+
+.text-row:last-child {
+  border-bottom: none;
+}
+
+.text-row__sample {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.text-row__meta {
+  flex: 0 0 auto;
+  font-size: var(--fs-nano);
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+
+.t-display { font-family: var(--font-display); font-size: var(--fs-display); line-height: var(--lh-display); letter-spacing: var(--ls-tight); }
+.t-h2 { font-family: var(--font-display); font-size: var(--fs-h2); line-height: var(--lh-tight); }
+.t-h3 { font-family: var(--font-display); font-size: var(--fs-h3); line-height: var(--lh-tight); }
+.t-body { font-size: var(--fs-body); line-height: var(--lh-body); }
+.t-sm { font-size: var(--fs-sm); line-height: var(--lh-body); }
+.t-xs { font-size: var(--fs-xs); line-height: var(--lh-body); }
+.t-2xs { font-size: var(--fs-2xs); line-height: var(--lh-ui); }
+.t-nano { font-size: var(--fs-nano); line-height: var(--lh-ui); }
+.t-soft { color: var(--ink-soft); }
+.t-faint { color: var(--ink-faint); }
+
+/* ── 间距 ── */
+.sp-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-1) 0;
+}
+
+.sp-row__label {
+  flex: 0 0 76px;
+  font-size: var(--fs-nano);
+  color: var(--ink-soft);
+}
+
+.sp-row__bar {
+  height: var(--sp-2);
+  flex: 0 0 auto;
+  background: var(--orange);
+  border: var(--stroke-thin) solid var(--ink);
+  border-radius: 2px;
+}
+
+.sp-row__px {
+  font-size: var(--fs-nano);
+  color: var(--ink-soft);
+}
+
+/* ── 圆角 / 描边 ── */
+.radius-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-3);
+  align-items: flex-end;
+}
+
+.radius-demo {
+  width: 64px;
+  text-align: center;
+  font-size: var(--fs-nano);
+  color: var(--ink-soft);
+}
+
+.radius-demo__box {
+  height: 64px;
+  background: var(--paper);
+  border: var(--stroke) solid var(--ink);
+  box-shadow: var(--shadow-sm);
+  margin-bottom: var(--sp-1);
+}
+
+.stroke-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-3);
+  margin-top: var(--sp-3);
+}
+
+.stroke-demo {
+  flex: 1 1 92px;
+  padding: var(--sp-2);
+  text-align: center;
+  font-size: var(--fs-nano);
+  color: var(--ink-soft);
+  background: var(--paper);
+  border-radius: var(--radius-sm);
+}
+
+/* ── 投影 ── */
+.shadow-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-4);
+  padding: var(--sp-2) var(--sp-1);
+}
+
+.shadow-demo {
+  flex: 1 1 96px;
+  min-width: 0;
+  padding: var(--sp-3) var(--sp-2);
+  text-align: center;
+  font-size: var(--fs-nano);
+  background: var(--paper);
+  border: var(--stroke-thin) solid var(--ink);
+  border-radius: var(--radius-sm);
+}
+
+.on-space {
+  background: var(--space);
+  border-radius: var(--radius-md);
+  padding: var(--sp-4) var(--sp-2) var(--sp-2);
+  margin-top: var(--sp-3);
+}
+
+/* ── 按钮 ── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-1);
+  min-height: var(--btn-h);
+  padding: var(--sp-3) var(--sp-5);
+  background: var(--paper);
+  color: var(--ink);
+  border: var(--stroke) solid var(--ink);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow);
+  font-family: inherit;
+  font-size: var(--fs-body);
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+}
+
+.btn--primary {
+  background: var(--orange);
+  color: var(--ink);
+}
+
+.btn--block {
+  width: 100%;
+}
+
+.btn.is-pressed {
+  transform: translate(3px, 3px);
+  box-shadow: var(--shadow-press);
+}
+
+.btn.is-disabled {
+  background: var(--cream-deep);
+  color: var(--ink-faint);
+  border-style: dashed;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+.btn.is-selected {
+  outline: 3px solid var(--state-selected);
+  outline-offset: var(--focus-offset);
+}
+
+.btn.is-focus {
+  outline: var(--focus-ring);
+  outline-offset: var(--focus-offset);
+}
+
+.btn.is-danger {
+  background: var(--danger-bg);
+  color: var(--danger-text);
+  border-color: var(--danger-edge);
+  box-shadow: 4px 4px 0 var(--danger-edge);
+}
+
+.state-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 132px), 1fr));
+  gap: var(--sp-3);
+}
+
+.state-cell {
+  min-width: 0;
+}
+
+.state-cell .btn {
+  width: 100%;
+  padding: var(--sp-2) var(--sp-2);
+  font-size: var(--fs-sm);
+}
+
+.state-label {
+  display: block;
+  margin-top: var(--sp-2);
+  font-size: var(--fs-nano);
+  color: var(--ink-soft);
+  text-align: center;
+}
+
+.state-label b {
+  display: block;
+  color: var(--ink);
+  font-size: var(--fs-2xs);
+}
+
+/* ── 贴纸 / 卡片 ── */
+.items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-4);
+  align-items: flex-start;
+}
+
+.item {
+  position: relative;
+  width: var(--item-card-w);
+  border: var(--stroke) solid var(--ink);
+  border-radius: var(--radius-md);
+  background: var(--paper);
+  box-shadow: var(--shadow-sm);
+  padding: var(--sp-1);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-1);
+}
+
+.item__icon {
+  width: var(--item-icon-card);
+  height: var(--item-icon-card);
+  display: block;
+}
+
+.item__name {
+  font-size: var(--fs-2xs);
+  line-height: var(--lh-tight);
+  font-weight: 700;
+  text-align: center;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  min-height: calc(2 * var(--fs-2xs) * var(--lh-tight));
+}
+
+.item__count {
+  position: absolute;
+  right: calc(-1 * var(--sp-1));
+  top: calc(-1 * var(--sp-2));
+  min-width: 21px;
+  height: 21px;
+  padding: 0 var(--sp-1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: var(--stroke-thin) solid var(--ink);
+  border-radius: var(--radius-pill);
+  background: var(--yellow);
+  font-size: var(--fs-nano);
+  font-weight: 800;
+}
+
+.item.is-selected {
+  outline: 3px solid var(--state-selected);
+  outline-offset: var(--focus-offset);
+}
+
+.item.is-danger {
+  background: var(--danger-soft-bg);
+  border-color: var(--danger-soft-edge);
+  box-shadow: var(--shadow);
+}
+
+.item.is-danger::after {
+  content: '✕';
+  position: absolute;
+  right: calc(-1 * var(--sp-2));
+  top: calc(-1 * var(--sp-2));
+  width: 23px;
+  height: 23px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: var(--stroke-thin) solid var(--ink);
+  border-radius: var(--radius-pill);
+  background: var(--paper);
+  font-size: var(--fs-nano);
+  font-weight: 900;
+  line-height: 1;
+}
+
+.world-item {
+  position: relative;
+  width: var(--item-world-max);
+  height: var(--item-world-max);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.world-item__shadow {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: 30px;
+  height: 8px;
+  transform: translateX(-50%);
+  border-radius: var(--radius-pill);
+  background: var(--planet-shade);
+}
+
+.world-item__art {
+  position: relative;
+  width: var(--item-world);
+  height: var(--item-world);
+  margin-bottom: var(--sp-1);
+  border-radius: var(--radius-xs);
+  background: var(--paper);
+  border: var(--stroke-thin) solid var(--ink);
+}
+
+.world-item--min .world-item__art {
+  width: var(--item-world-min);
+  height: var(--item-world-min);
+}
+
+.world-item__caption {
+  font-size: var(--fs-nano);
+  color: var(--ink-soft);
+  text-align: center;
+  margin-top: var(--sp-1);
+}
+
+/* ── chip ── */
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+}
+
+.chip {
+  padding: var(--sp-1) var(--sp-3);
+  border: var(--stroke) solid var(--ink);
+  border-radius: var(--radius-pill);
+  background: var(--paper);
+  box-shadow: var(--shadow-sm);
+  font-size: var(--fs-2xs);
+  font-weight: 700;
+}
+
+.chip.is-active {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.chip.is-locked {
+  color: var(--ink-faint);
+  border-style: dashed;
+  box-shadow: none;
+}
+
+/* ── HUD ── */
+.hud {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  height: var(--hud-h);
+  min-height: var(--hud-h);
+  padding: 0 var(--sp-2);
+  background: var(--paper);
+  border: var(--stroke) solid var(--ink);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-sm);
+  min-width: 0;
+  overflow: hidden;
+}
+
+.hud__stat {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-1);
+  min-width: 0;
+  font-size: var(--fs-2xs);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.hud__stat b {
+  font-family: var(--font-display);
+  font-size: var(--fs-h3);
+  line-height: 1;
+}
+
+.hud__spacer {
+  flex: 1;
+  min-width: var(--sp-1);
+}
+
+.hud__progress {
+  width: 64px;
+  height: 9px;
+  flex: 0 0 auto;
+  border: var(--stroke-thin) solid var(--ink);
+  border-radius: var(--radius-pill);
+  background: var(--paper);
+  overflow: hidden;
+}
+
+.hud__progress span {
+  display: block;
+  height: 100%;
+  width: 60%;
+  background: var(--orange);
+}
+
+.hud__bag {
+  position: relative;
+  min-height: 28px;
+  height: 28px;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-1);
+  padding: 0 var(--sp-2);
+  border: var(--stroke) solid var(--ink);
+  border-radius: var(--radius-sm);
+  background: var(--paper);
+  box-shadow: var(--shadow-sm);
+  font-size: var(--fs-2xs);
+  font-weight: 800;
+}
+
+/* 视觉 28，热区 44：向外扩 8px，不撑高 HUD */
+.hud__bag::after {
+  content: '';
+  position: absolute;
+  inset: calc(-1 * var(--sp-2));
+  border-radius: var(--radius-sm);
+}
+
+.hud__bag-count {
+  position: absolute;
+  right: calc(-1 * var(--sp-1));
+  top: calc(-1 * var(--sp-1));
+  min-width: 19px;
+  height: 19px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: var(--stroke-thin) solid var(--ink);
+  border-radius: var(--radius-pill);
+  background: var(--yellow);
+  font-size: var(--fs-nano);
+}
+
+/* ── 对话条 ── */
+.dialogue {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-3);
+  min-height: var(--dialogue-h-expanded);
+  padding: var(--sp-3) var(--sp-4);
+  background: var(--ink);
+  color: var(--paper);
+  border: var(--stroke) solid var(--ink);
+  border-radius: var(--radius-sm);
+}
+
+.dialogue--collapsed {
+  align-items: center;
+  height: var(--dialogue-h-collapsed);
+  min-height: var(--dialogue-h-collapsed);
+  padding: var(--sp-2) var(--sp-4);
+}
+
+.dialogue--collapsed .dialogue__text {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dialogue__avatar {
+  flex: 0 0 auto;
+  width: var(--avatar);
+  height: var(--avatar);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: var(--stroke-thin) solid var(--paper);
+  border-radius: var(--radius-pill);
+  background: var(--orange);
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: var(--fs-2xs);
+}
+
+.dialogue__text {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--fs-sm);
+  line-height: var(--lh-body);
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+
+.dialogue__next {
+  flex: 0 0 auto;
+  align-self: flex-end;
+  font-size: var(--fs-nano);
+  opacity: 0.55;
+  white-space: nowrap;
+}
+
+/* ── 合成槽 ── */
+.slots {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-3);
+}
+
+.slot {
+  flex: 1 1 100px;
+  min-width: 0;
+  min-height: var(--slot-h);
+  padding: var(--sp-1);
+  border: var(--stroke) dashed var(--ink);
+  border-radius: var(--radius-md);
+  background: var(--paper);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-1);
+  font-size: var(--fs-2xs);
+  color: var(--ink-soft);
+  text-align: center;
+}
+
+.slot--filled {
+  border-style: solid;
+  color: var(--ink);
+  font-weight: 800;
+}
+
+.slot__plus {
+  font-family: var(--font-display);
+  font-size: var(--fs-h3);
+  line-height: 1;
+}
+
+.slot--disabled {
+  background: var(--cream-deep);
+  border-style: dashed;
+  color: var(--ink-faint);
+}
+
+/* ── 面板 ── */
+.panel {
+  border: var(--stroke) solid var(--ink);
+  border-radius: var(--radius-ui);
+  background: var(--paper);
+  overflow: hidden;
+  margin-bottom: var(--sp-2);
+}
+
+.panel:last-child {
+  margin-bottom: 0;
+}
+
+.panel__head {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-3);
+  font-size: var(--fs-sm);
+  font-weight: 800;
+}
+
+.panel__meta {
+  margin-left: auto;
+  font-size: var(--fs-2xs);
+  color: var(--ink-soft);
+  font-weight: 700;
+}
+
+.panel__body {
+  padding: 0 var(--sp-3) var(--sp-3);
+  font-size: var(--fs-xs);
+  line-height: var(--lh-body);
+  color: var(--ink-soft);
+}
+
+/* ── Toast / 浮层 ── */
+.toast {
+  max-width: 380px;
+  padding: var(--sp-3) var(--sp-4);
+  border: var(--stroke) solid var(--ink);
+  border-radius: var(--radius-ui);
+  background: var(--yellow);
+  box-shadow: var(--shadow);
+}
+
+.toast__title {
+  font-size: var(--fs-sm);
+  font-weight: 900;
+  margin-bottom: var(--sp-1);
+}
+
+.toast__body {
+  font-size: var(--fs-xs);
+  line-height: var(--lh-body);
+}
+
+.sheet-stage {
+  background: var(--scrim);
+  border-radius: var(--radius-md);
+  padding: var(--sp-4);
+}
+
+.sheet {
+  max-width: 420px;
+  margin: 0 auto;
+  padding: var(--sp-5);
+  border: var(--stroke) solid var(--ink);
+  border-radius: var(--radius-xl);
+  background: var(--paper);
+  box-shadow: var(--shadow-sheet);
+}
+
+.sheet__title {
+  font-family: var(--font-display);
+  font-size: var(--fs-h2);
+  line-height: var(--lh-tight);
+  margin: 0 0 var(--sp-1);
+}
+
+.sheet__desc {
+  font-size: var(--fs-sm);
+  line-height: var(--lh-body);
+  margin: 0 0 var(--sp-3);
+}
+
+.sheet__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-1);
+  margin-bottom: var(--sp-3);
+}
+
+/* ── 层级 / 动效 ── */
+.z-row {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  padding: var(--sp-1) 0;
+  font-size: var(--fs-nano);
+  border-bottom: var(--stroke-hair) dashed var(--rule);
+}
+
+.z-row:last-child {
+  border-bottom: none;
+}
+
+.z-row__name {
+  color: var(--ink-soft);
+}
+
+.z-row__val {
+  font-family: var(--font-display);
+}
+
+.motion-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-2) 0;
+  border-bottom: var(--stroke-hair) dashed var(--rule);
+  font-size: var(--fs-xs);
+}
+
+.motion-row:last-child {
+  border-bottom: none;
+}
+
+.motion-dot {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+  border-radius: var(--radius-pill);
+  background: var(--orange);
+  border: var(--stroke-thin) solid var(--ink);
+}
+
+.motion-row__name {
+  flex: 1;
+  min-width: 0;
+  color: var(--ink-soft);
+}
+
+.motion-row__val {
+  font-size: var(--fs-nano);
+  white-space: nowrap;
+}
+
+.float-demo {
+  position: relative;
+  height: 56px;
+  margin-top: var(--sp-3);
+  border: var(--stroke-thin) dashed var(--ink);
+  border-radius: var(--radius-sm);
+  background: var(--cream);
+  overflow: hidden;
+}
+
+.float-demo__dot {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 18px;
+  height: 18px;
+  margin: -9px 0 0 -9px;
+  border-radius: var(--radius-pill);
+  background: var(--mint);
+  border: var(--stroke-thin) solid var(--ink);
+  animation: float var(--dur-loop) var(--ease-out) infinite alternate;
+}
+
+@keyframes float {
+  from { transform: translateY(-4px); }
+  to { transform: translateY(4px); }
+}
+
+.fine-print {
+  margin-top: var(--sp-4);
+  padding-top: var(--sp-3);
+  border-top: var(--stroke-hair) dashed var(--rule);
+  font-size: var(--fs-nano);
+  line-height: var(--lh-body);
+  color: var(--ink-soft);
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 380px) {
+  .item {
+    width: var(--item-card-w-narrow);
+  }
+  .item__name {
+    font-size: var(--fs-nano);
+  }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="page-head">
+    <p class="page-head__kicker">Design System Preview · v2.0</p>
+    <h1 class="page-head__title">《好垃》视觉样张</h1>
+    <p class="page-head__desc">
+      16 个区块，全部用令牌取值。危险态为静态并列，不依赖 hover；窗口宽度 ≤375px 时仍不应横向滚动。
+      规格与理由见 <b>docs/design/DESIGN-SYSTEM.md</b>。
+    </p>
+    <div class="overflow js-overflow">正在检测溢出…</div>
+  </header>
+
+  <div class="grid">
+
+    <!-- 01 -->
+    <section class="card">
+      <h2><span class="card__no">01</span>色彩 · 基础色盘</h2>
+      <div class="swatches">
+        <div class="swatch"><div class="swatch__chip" style="background:var(--cream)"></div><div class="swatch__meta"><span class="swatch__name">--cream</span><span class="swatch__use">页面底</span></div></div>
+        <div class="swatch"><div class="swatch__chip" style="background:var(--cream-deep)"></div><div class="swatch__meta"><span class="swatch__name">--cream-deep</span><span class="swatch__use">次级面 / 太空</span></div></div>
+        <div class="swatch"><div class="swatch__chip" style="background:var(--ink)"></div><div class="swatch__meta"><span class="swatch__name">--ink</span><span class="swatch__use">描边 / 正文</span></div></div>
+        <div class="swatch"><div class="swatch__chip" style="background:var(--paper)"></div><div class="swatch__meta"><span class="swatch__name">--paper</span><span class="swatch__use">卡片 / 星球</span></div></div>
+        <div class="swatch"><div class="swatch__chip" style="background:var(--orange)"></div><div class="swatch__meta"><span class="swatch__name">--orange</span><span class="swatch__use">主操作 / 危险边</span></div></div>
+        <div class="swatch"><div class="swatch__chip" style="background:var(--mint)"></div><div class="swatch__meta"><span class="swatch__name">--mint</span><span class="swatch__use">选中 / 成功</span></div></div>
+        <div class="swatch"><div class="swatch__chip" style="background:var(--purple)"></div><div class="swatch__meta"><span class="swatch__name">--purple</span><span class="swatch__use">稀有</span></div></div>
+        <div class="swatch"><div class="swatch__chip" style="background:var(--pink)"></div><div class="swatch__meta"><span class="swatch__name">--pink</span><span class="swatch__use">柔和危险面</span></div></div>
+        <div class="swatch"><div class="swatch__chip" style="background:var(--yellow)"></div><div class="swatch__meta"><span class="swatch__name">--yellow</span><span class="swatch__use">Toast / 角标</span></div></div>
+      </div>
+      <p class="note"><strong>荧光色只当底，墨黑当字。</strong>纸白字压在橙色上只有 2.8:1，直接弃用。</p>
+    </section>
+
+    <!-- 02 -->
+    <section class="card">
+      <h2><span class="card__no">02</span>色彩 · 世界中性阶</h2>
+      <div class="world-mock">
+        <div class="planet-mock">
+          <div class="planet-mock__patch"></div>
+          <div class="planet-mock__fog"></div>
+        </div>
+      </div>
+      <div class="legend">
+        <span>--space 太空（浅，不压暗）</span>
+        <span>--planet 星球面</span>
+        <span>--planet-shade 斑块与贴地投影</span>
+        <span>--void 未解锁雾障 35%</span>
+      </div>
+    </section>
+
+    <!-- 03 -->
+    <section class="card">
+      <h2><span class="card__no">03</span>色彩 · 文字阶与对比度</h2>
+      <div class="text-row">
+        <span class="text-row__sample t-body">地上的东西比你还着急。</span>
+        <span class="text-row__meta">--ink 15.3:1</span>
+      </div>
+      <div class="text-row">
+        <span class="text-row__sample t-body t-soft">地上的东西比你还着急。</span>
+        <span class="text-row__meta">--ink-soft 4.7:1</span>
+      </div>
+      <div class="text-row">
+        <span class="text-row__sample t-h3 t-faint">地上的东西比你还着急。</span>
+        <span class="text-row__meta">--ink-faint 3.2:1</span>
+      </div>
+      <p class="note">--ink-faint <strong>不能承载信息性正文</strong>：3.2:1 只够做大字、图标与非文本边框。</p>
+    </section>
+
+    <!-- 04 -->
+    <section class="card">
+      <h2><span class="card__no">04</span>字体与字号阶</h2>
+      <div class="text-row"><span class="text-row__sample t-display">好垃</span><span class="text-row__meta">display</span></div>
+      <div class="text-row"><span class="text-row__sample t-h2">物品详情</span><span class="text-row__meta">h2 22</span></div>
+      <div class="text-row"><span class="text-row__sample t-h3">第 7 天</span><span class="text-row__meta">h3 19</span></div>
+      <div class="text-row"><span class="text-row__sample t-body">正文基准 16px，行高 1.7，中文不挤。</span><span class="text-row__meta">body 16</span></div>
+      <div class="text-row"><span class="text-row__sample t-sm">对话与面板标题用 14px。</span><span class="text-row__meta">sm 14</span></div>
+      <div class="text-row"><span class="text-row__sample t-xs">描述与日志用 13px，仅限次级信息。</span><span class="text-row__meta">xs 13</span></div>
+      <div class="text-row"><span class="text-row__sample t-2xs">物品名 12px</span><span class="text-row__meta">2xs 12</span></div>
+      <div class="text-row"><span class="text-row__sample t-nano">角标 11px</span><span class="text-row__meta">nano 11</span></div>
+    </section>
+
+    <!-- 05 -->
+    <section class="card">
+      <h2><span class="card__no">05</span>间距阶</h2>
+      <div class="sp-row"><span class="sp-row__label">--sp-1</span><span class="sp-row__bar" style="width:var(--sp-1)"></span><span class="sp-row__px">4</span></div>
+      <div class="sp-row"><span class="sp-row__label">--sp-2</span><span class="sp-row__bar" style="width:var(--sp-2)"></span><span class="sp-row__px">8</span></div>
+      <div class="sp-row"><span class="sp-row__label">--sp-3</span><span class="sp-row__bar" style="width:var(--sp-3)"></span><span class="sp-row__px">12</span></div>
+      <div class="sp-row"><span class="sp-row__label">--sp-4</span><span class="sp-row__bar" style="width:var(--sp-4)"></span><span class="sp-row__px">16</span></div>
+      <div class="sp-row"><span class="sp-row__label">--sp-6</span><span class="sp-row__bar" style="width:var(--sp-6)"></span><span class="sp-row__px">24</span></div>
+      <div class="sp-row"><span class="sp-row__label">--sp-8</span><span class="sp-row__bar" style="width:var(--sp-8)"></span><span class="sp-row__px">32</span></div>
+      <div class="sp-row"><span class="sp-row__label">--sp-12</span><span class="sp-row__bar" style="width:var(--sp-12)"></span><span class="sp-row__px">48</span></div>
+      <p class="note">只允许 4 的倍数；12 是默认内距，16 是区块间距。</p>
+    </section>
+
+    <!-- 06 -->
+    <section class="card">
+      <h2><span class="card__no">06</span>圆角与描边</h2>
+      <div class="radius-row">
+        <div class="radius-demo"><div class="radius-demo__box" style="border-radius:var(--radius-xs)"></div>xs 10</div>
+        <div class="radius-demo"><div class="radius-demo__box" style="border-radius:var(--radius-sm)"></div>sm 12</div>
+        <div class="radius-demo"><div class="radius-demo__box" style="border-radius:var(--radius-md)"></div>md 14</div>
+        <div class="radius-demo"><div class="radius-demo__box" style="border-radius:var(--radius-xl)"></div>xl 22</div>
+        <div class="radius-demo"><div class="radius-demo__box" style="border-radius:var(--radius-pill)"></div>pill</div>
+      </div>
+      <div class="stroke-row">
+        <div class="stroke-demo" style="border:var(--stroke-hair) solid var(--ink)">hair 1</div>
+        <div class="stroke-demo" style="border:var(--stroke-thin) solid var(--ink)">thin 2</div>
+        <div class="stroke-demo" style="border:var(--stroke) solid var(--ink)">stroke 3</div>
+      </div>
+    </section>
+
+    <!-- 07 -->
+    <section class="card">
+      <h2><span class="card__no">07</span>投影阶</h2>
+      <div class="shadow-row">
+        <div class="shadow-demo" style="box-shadow:var(--shadow-sm)">shadow-sm</div>
+        <div class="shadow-demo" style="box-shadow:var(--shadow)">shadow</div>
+        <div class="shadow-demo" style="box-shadow:var(--shadow-press)">press</div>
+        <div class="shadow-demo" style="box-shadow:var(--shadow-sheet)">sheet</div>
+      </div>
+      <div class="on-space">
+        <div class="shadow-demo" style="box-shadow:var(--shadow-item);border-color:var(--ink)">shadow-item（世界层）</div>
+      </div>
+      <p class="note">投影都是实心偏移，<strong>没有 blur、没有 spread</strong>。世界层用 --planet-shade，不用墨黑。</p>
+    </section>
+
+    <!-- 08 -->
+    <section class="card">
+      <h2><span class="card__no">08</span>按钮 · 五态并列</h2>
+      <div class="state-grid">
+        <div class="state-cell">
+          <button type="button" class="btn">默认</button>
+          <span class="state-label"><b>默认</b>paper + shadow</span>
+        </div>
+        <div class="state-cell">
+          <button type="button" class="btn is-pressed">按压</button>
+          <span class="state-label"><b>按压</b>位移 + press</span>
+        </div>
+        <div class="state-cell">
+          <button type="button" class="btn is-disabled" disabled>禁用</button>
+          <span class="state-label"><b>禁用</b>虚线边 + 无投影</span>
+        </div>
+        <div class="state-cell">
+          <button type="button" class="btn is-selected">选中</button>
+          <span class="state-label"><b>选中</b>薄荷环</span>
+        </div>
+        <div class="state-cell">
+          <button type="button" class="btn is-danger">丢弃</button>
+          <span class="state-label"><b>危险 A</b>墨底 + 橙边</span>
+        </div>
+        <div class="state-cell">
+          <button type="button" class="btn btn--primary">主操作</button>
+          <span class="state-label"><b>主操作</b>橙底 + 墨字 6.1:1</span>
+        </div>
+      </div>
+      <p class="note">静态类名并列，<strong>不使用 hover</strong>；按压态用位移与投影双编码，灰度下也能区分。</p>
+    </section>
+
+    <!-- 09 -->
+    <section class="card">
+      <h2><span class="card__no">09</span>危险态 · 两种变体与判定</h2>
+      <div class="rule-box">
+        <b>判定规则：</b>控件内部有墨黑图形 → <b>变体 B</b>（粉底 + 墨边 + ✕）；纯文字 → <b>变体 A</b>（墨底 + 橙边/投影）。
+      </div>
+      <div class="items" style="margin-top:var(--sp-3)">
+        <div class="item is-danger">
+          <svg class="item__icon" viewBox="0 0 40 40" aria-hidden="true">
+            <rect x="6" y="12" width="28" height="22" rx="4" style="fill:var(--mint);stroke:var(--ink);stroke-width:2"></rect>
+            <path d="M14 12 L16 6 H24 L26 12" style="fill:none;stroke:var(--ink);stroke-width:2"></path>
+          </svg>
+          <span class="item__name">可疑背包</span>
+        </div>
+        <div class="item">
+          <svg class="item__icon" viewBox="0 0 40 40" aria-hidden="true">
+            <circle cx="20" cy="20" r="13" style="fill:var(--yellow);stroke:var(--ink);stroke-width:2"></circle>
+            <path d="M20 12 V21 L27 25" style="fill:none;stroke:var(--ink);stroke-width:2"></path>
+          </svg>
+          <span class="item__name">锈齿轮</span>
+        </div>
+      </div>
+      <div class="items" style="margin-top:var(--sp-3)">
+        <button type="button" class="btn is-danger">清空背包</button>
+        <button type="button" class="btn is-danger">删除存档</button>
+      </div>
+      <p class="note">左侧卡片里有墨黑图形，所以用粉底；右侧两个按钮只有文字，所以用墨底。两者都必须含动作词或 ✕，颜色不是唯一线索。</p>
+    </section>
+
+    <!-- 10 -->
+    <section class="card">
+      <h2><span class="card__no">10</span>区域 chip</h2>
+      <div class="chips">
+        <span class="chip is-active">坠毁点</span>
+        <span class="chip">垃圾山</span>
+        <span class="chip is-locked">外星集市</span>
+        <span class="chip is-locked">怪石洞窟</span>
+      </div>
+      <p class="note">锁定态用 <strong>虚线边 + --ink-faint</strong>，不用 opacity 0.38 那种看不见的压淡。v2 里 chip 只做「当前区域」指示，不再是导航。</p>
+    </section>
+
+    <!-- 11 -->
+    <section class="card">
+      <h2><span class="card__no">11</span>物品贴纸与地面尺寸</h2>
+      <div class="items">
+        <div>
+          <div class="world-item">
+            <div class="world-item__shadow"></div>
+            <div class="world-item__art"></div>
+          </div>
+          <p class="world-item__caption">32 基准</p>
+        </div>
+        <div>
+          <div class="world-item world-item--min">
+            <div class="world-item__shadow"></div>
+            <div class="world-item__art"></div>
+          </div>
+          <p class="world-item__caption">28 最小</p>
+        </div>
+        <div class="item">
+          <svg class="item__icon" viewBox="0 0 40 40" aria-hidden="true">
+            <path d="M8 30 L20 8 L32 30 Z" style="fill:var(--orange);stroke:var(--ink);stroke-width:2"></path>
+          </svg>
+          <span class="item__name">能粘的东西</span>
+          <span class="item__count">3</span>
+        </div>
+        <div class="item is-selected">
+          <svg class="item__icon" viewBox="0 0 40 40" aria-hidden="true">
+            <rect x="8" y="8" width="24" height="24" rx="4" style="fill:var(--purple);stroke:var(--ink);stroke-width:2"></rect>
+          </svg>
+          <span class="item__name">过期电池</span>
+        </div>
+      </div>
+      <p class="note">地面贴纸 28–36，贴地投影用 --planet-shade；背包卡片 84（≤380px 76），名字最多 2 行且 <strong>禁用 break-all</strong>。选中用薄荷环，不用橙。</p>
+    </section>
+
+    <!-- 12 -->
+    <section class="card">
+      <h2><span class="card__no">12</span>HUD 条</h2>
+      <div class="hud">
+        <span class="hud__stat">第<b>7</b>天</span>
+        <span class="hud__stat">阶段<b>2</b></span>
+        <span class="hud__spacer"></span>
+        <span class="hud__progress"><span></span></span>
+        <span class="hud__bag">背包<span class="hud__bag-count">12</span></span>
+      </div>
+      <p class="note">视觉高 36，热区 44（用 padding 补，不撑高）。<strong>不做半透明底</strong>：世界底色随相机变化，半透明上的 12px 字对比度不可验证。</p>
+    </section>
+
+    <!-- 13 -->
+    <section class="card">
+      <h2><span class="card__no">13</span>对话条</h2>
+      <div class="dialogue dialogue--collapsed">
+        <span class="dialogue__avatar">AI</span>
+        <span class="dialogue__text">这地方连风都懒得吹。</span>
+        <span class="dialogue__next">继续 ▸</span>
+      </div>
+      <div class="dialogue" style="margin-top:var(--sp-3)">
+        <span class="dialogue__avatar">AI</span>
+        <span class="dialogue__text">你把盖子和会发光的棍子粘在一起，居然成了。</span>
+        <span class="dialogue__next">继续 ▸</span>
+      </div>
+      <p class="note">收起 44（单行 + 省略号），展开 80（两行 14/1.7 + padding + 边框）。墨底纸字 15.3:1。</p>
+    </section>
+
+    <!-- 14 -->
+    <section class="card">
+      <h2><span class="card__no">14</span>合成槽</h2>
+      <div class="slots">
+        <div class="slot slot--filled">能粘的东西</div>
+        <div class="slot"><span class="slot__plus">+</span></div>
+      </div>
+      <div class="slots" style="margin-top:var(--sp-3)">
+        <div class="slot slot--disabled">先捡到东西</div>
+        <div class="slot slot--disabled">空</div>
+      </div>
+      <p class="note">空槽虚线 3px，填充实线；高 62。槽内名称最多 2 行，超出省略。</p>
+    </section>
+
+    <!-- 15 -->
+    <section class="card">
+      <h2><span class="card__no">15</span>背包卡片与折叠面板</h2>
+      <div class="items" style="margin-bottom:var(--sp-3)">
+        <div class="item">
+          <svg class="item__icon" viewBox="0 0 40 40" aria-hidden="true">
+            <circle cx="20" cy="20" r="12" style="fill:var(--mint);stroke:var(--ink);stroke-width:2"></circle>
+          </svg>
+          <span class="item__name">湿纸巾</span>
+          <span class="item__count">2</span>
+        </div>
+        <div class="item">
+          <svg class="item__icon" viewBox="0 0 40 40" aria-hidden="true">
+            <path d="M10 28 L20 10 L30 28 Z" style="fill:var(--yellow);stroke:var(--ink);stroke-width:2"></path>
+          </svg>
+          <span class="item__name">半块砖</span>
+        </div>
+        <div class="item">
+          <svg class="item__icon" viewBox="0 0 40 40" aria-hidden="true">
+            <rect x="9" y="9" width="22" height="22" rx="11" style="fill:var(--orange);stroke:var(--ink);stroke-width:2"></rect>
+          </svg>
+          <span class="item__name">热的东西</span>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel__head">本阶段目标<span class="panel__meta">2/3</span></div>
+        <div class="panel__body">把两根会导电的东西接上，然后祈祷。别问为什么，问就是玄学。</div>
+      </div>
+      <div class="panel">
+        <div class="panel__head">日志<span class="panel__meta">全部</span></div>
+        <div class="panel__body">第 6 天 · 你终于把那个盖子拧开了。</div>
+      </div>
+    </section>
+
+    <!-- 16 -->
+    <section class="card">
+      <h2><span class="card__no">16</span>Toast · 浮层 · 层级 · 动效 · 焦点</h2>
+      <div class="toast">
+        <div class="toast__title">第一次捡到</div>
+        <div class="toast__body">「能粘的东西」已放进背包。靠近就会自动捡，不用点它。</div>
+      </div>
+
+      <div class="sheet-stage" style="margin-top:var(--sp-3)">
+        <div class="sheet">
+          <h3 class="sheet__title">能粘的东西</h3>
+          <p class="sheet__desc">一种说不清成分的黏性残留物。碰到什么都想粘，包括你的手。</p>
+          <div class="sheet__tags">
+            <span class="chip">黏</span>
+            <span class="chip">基础</span>
+            <span class="chip">可合成</span>
+          </div>
+          <div style="display:flex;gap:var(--sp-2);flex-wrap:wrap">
+            <button type="button" class="btn is-focus" style="flex:1 1 120px">关闭</button>
+            <button type="button" class="btn btn--primary" style="flex:1 1 120px">放进槽里</button>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top:var(--sp-4)">
+        <div class="z-row"><span class="z-row__name">--z-world / ground / items / actors / fx</span><span class="z-row__val">0–4</span></div>
+        <div class="z-row"><span class="z-row__name">--z-grain</span><span class="z-row__val">30</span></div>
+        <div class="z-row"><span class="z-row__name">--z-hud / hint / dialogue</span><span class="z-row__val">40 / 45 / 50</span></div>
+        <div class="z-row"><span class="z-row__name">--z-drawer / toast / sheet</span><span class="z-row__val">100 / 200 / 300</span></div>
+      </div>
+
+      <div style="margin-top:var(--sp-3)">
+        <div class="motion-row"><span class="motion-dot"></span><span class="motion-row__name">按压 / 状态切换</span><span class="motion-row__val">--dur-1 90ms</span></div>
+        <div class="motion-row"><span class="motion-dot"></span><span class="motion-row__name">浮层 / 抽屉</span><span class="motion-row__val">--dur-2 180ms</span></div>
+        <div class="motion-row"><span class="motion-dot"></span><span class="motion-row__name">拾取飞入</span><span class="motion-row__val">--dur-3 260ms</span></div>
+        <div class="motion-row"><span class="motion-dot"></span><span class="motion-row__name">刷新生长 / 雾障</span><span class="motion-row__val">--dur-4 400ms</span></div>
+      </div>
+
+      <div class="float-demo"><span class="float-demo__dot"></span></div>
+
+      <p class="fine-print">
+        焦点环：3px 墨黑 + 2px offset（见上方「关闭」按钮）。开启系统「减少动效」后，五档时长全部压到 1ms，
+        动画仍在（保留 transitionend 事件）但肉眼不可见；颗粒层 --z-grain 30 位于世界之上、UI 之下，不压正文。
+      </p>
+    </section>
+
+  </div>
+</div>
+
+<script>
+(function () {
+  var box = document.querySelector('.js-overflow');
+  if (!box) return;
+
+  function check() {
+    var vw = window.innerWidth;
+    var docW = document.documentElement.scrollWidth;
+    var offenders = [];
+
+    document.querySelectorAll('body *').forEach(function (el) {
+      var r = el.getBoundingClientRect();
+      if (r.width > 0 && r.right > vw + 0.5) {
+        var name = el.tagName.toLowerCase();
+        if (el.className && typeof el.className === 'string') {
+          name += '.' + el.className.trim().split(/\s+/).join('.');
+        }
+        offenders.push(name + ' → right=' + Math.round(r.right));
+      }
+    });
+
+    var ok = docW <= vw + 0.5 && offenders.length === 0;
+    box.textContent =
+      (ok ? '溢出检测：通过 — ' : '溢出检测：发现溢出 — ') +
+      '视口 ' + vw + 'px，文档 scrollWidth ' + docW + 'px，越界元素 ' +
+      offenders.length + ' 个' +
+      (offenders.length ? '：' + offenders.slice(0, 8).join('；') : '');
+    box.style.borderStyle = ok ? 'dashed' : 'solid';
+    box.style.background = ok ? 'var(--cream)' : 'var(--pink)';
+  }
+
+  check();
+  window.addEventListener('resize', check);
+})();
+</script>
+</body>
+</html>

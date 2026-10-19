@@ -7,7 +7,8 @@ export default defineConfig({
   base: process.env.VITE_BASE ?? '/',
   server: {
     port: 5173,
-    host: '127.0.0.1',
+    // 局域网可访问，方便用手机真机测试
+    host: true,
   },
   optimizeDeps: {
     exclude: ['@haola/game-core'],

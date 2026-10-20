@@ -1,7 +1,7 @@
 import type { AccidentRule, Recipe, Tag } from './types';
 
 /**
- * 精确配方：24 条。
+ * 精确配方：36 条。
  *
  * 精确配方不是推进阶段的唯一途径，只是快捷路径。
  * 判定优先级：阶段目标 > 精确配方 > 风险 > 意外配对 > 兜底。
@@ -36,6 +36,19 @@ export const RECIPES: Recipe[] = [
   { a: 'manual', b: 'poker', out: 'birthproof' },
   { a: 'fuel', b: 'sandwich', out: 'cakerepl' },
   { a: 'mood', b: 'tape', out: 'clapper' },
+  // T6 扩容：新物品路线 + 旧产物备选路径
+  { a: 'crowbar', b: 'windbreak', out: 'hullplate' },
+  { a: 'lamp', b: 'sandwich', out: 'hotsandwich' },
+  { a: 'echo', b: 'rock', out: 'musicbox' },
+  { a: 'mirror', b: 'paste', out: 'mannequin' },
+  { a: 'debt', b: 'lottery', out: 'bankrupt' },
+  { a: 'firework', b: 'battery', out: 'dud' },
+  { a: 'ducttape', b: 'wrench', out: 'doorthing' },
+  { a: 'plasma', b: 'antigrav', out: 'spinner' },
+  { a: 'broom', b: 'sock', out: 'windbreak' },
+  { a: 'tire', b: 'windbreak', out: 'bedframe' },
+  { a: 'fossil', b: 'crystal', out: 'signal' },
+  { a: 'photo', b: 'homework', out: 'menu' },
 ];
 
 /** 无序 key：两个 id 排序后拼接，保证 a+b 与 b+a 命中同一条 */

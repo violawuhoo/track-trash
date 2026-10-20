@@ -17,7 +17,12 @@ export function HintBar() {
   const stage = useGame((s) => s.save.stage);
   const stepIndex = useGame((s) => s.save.stepIndex);
   const bag = useGame((s) => s.save.bag);
+  const tutorialStep = useGame((s) => s.save.tutorial.step);
   const [open, setOpen] = useState(false);
+
+  // T7：引导期间把左下角的位置让给 TutorBar（375px 上两个 pill 放不下），
+  // 引导结束（step 到 free）自动回来。目标提示一条不少，只是换时段说。
+  if (tutorialStep !== 'free') return null;
 
   const progress: Progress = { stage, stepIndex };
   const missing = missingForBag(progress, bag).slice(0, 2);

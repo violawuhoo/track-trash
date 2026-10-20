@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getItem, pickSearch } from '../src/index';
+import { AREA_POOLS, getItem, pickSearch } from '../src/index';
 import type { Tag } from '../src/index';
 
 /** 固定序列随机源 */
@@ -67,8 +67,7 @@ describe('搜索与硬保底', () => {
       areaId: 'crash',
       rng: seq(0.1, 0.9),
     });
-    const pool = ['tape', 'wrench', 'manual', 'sandwich', 'battery'];
-    for (const id of got) expect(pool).toContain(id);
+    for (const id of got) expect(AREA_POOLS.crash).toContain(id);
   });
 
   it('阶段 3 没有标签目标，不会触发保底', () => {

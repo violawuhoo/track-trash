@@ -97,11 +97,12 @@ await page.screenshot({ path: 'shots/t4-mobile.png' });
 console.log('saved t4-mobile');
 await audit(page, 'mobile');
 
-// 用开发调试口把三件地上物品真的捡进背包（走 store.collect，
-// 与玩家走到拾取半径是同一条代码路径），这样背包抽屉截图里有真东西
+// 用开发调试口把地上物品真的捡进背包（走 store.collect，
+// 与玩家走到拾取半径是同一条代码路径），这样背包抽屉截图里有真东西。
+// 捡 4 件：T7 引导在第 4 次拾取后收尾，HintBar 才会回来——下一步才点得到 .hint__chip
 await page.evaluate(() => {
   const store = window.__haola;
-  const uids = store.getState().world.slice(0, 3).map((it) => it.uid);
+  const uids = store.getState().world.slice(0, 4).map((it) => it.uid);
   for (const uid of uids) store.getState().collect(uid);
 });
 await page.waitForTimeout(400);

@@ -448,6 +448,65 @@ button:focus:not(:focus-visible) {
   margin-top: var(--sp-2);
 }
 
+/* ═══════════════════ T7 引导条 ═══════════════════ */
+
+.tutor {
+  position: absolute;
+  left: var(--sp-2);
+  /* 与 HintBar 同槽：引导期间 HintBar 让位，两者不并存 */
+  bottom: calc(var(--dialogue-h-expanded) + var(--sp-2) + var(--safe-bottom));
+  z-index: var(--z-hint);
+  max-width: calc(100% - var(--sp-4));
+  pointer-events: none;
+}
+
+.tutor__pill {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-height: var(--tap-min);
+  padding: var(--sp-1) var(--sp-3);
+  border: var(--stroke) solid var(--ink);
+  border-radius: var(--radius-pill);
+  background: var(--paper);
+  box-shadow: var(--shadow);
+  pointer-events: auto;
+}
+
+/* 引导期内轻微浮动一下，让「这是提示」从语气上就能听出来 */
+@media (prefers-reduced-motion: no-preference) {
+  .tutor__pill {
+    animation: tutor-bob 1.6s ease-in-out infinite;
+  }
+}
+
+@keyframes tutor-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+.tutor__badge {
+  flex: 0 0 auto;
+  padding: 0 var(--sp-2);
+  border: var(--stroke-thin) solid var(--ink);
+  border-radius: var(--radius-pill);
+  background: var(--orange);
+  font-size: var(--fs-nano);
+  font-weight: 800;
+  color: var(--ink);
+}
+
+.tutor__text {
+  font-size: var(--fs-xs);
+  font-weight: 800;
+  line-height: var(--lh-body);
+}
+
 /* ═══════════════════ 背包抽屉 / 网页侧栏 ═══════════════════ */
 
 .drawer__scrim {

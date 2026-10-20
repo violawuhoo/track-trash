@@ -29,10 +29,8 @@ describe('数据完整性', () => {
     }
   });
 
-  it('base 物品必须归属一个区域（访客掉落除外）', () => {
-    const visitorItems = new Set(['note', 'glitter']);
+  it('base 物品必须归属一个区域', () => {
     for (const item of ITEMS.filter((i) => i.kind === 'base')) {
-      if (visitorItems.has(item.id)) continue;
       expect(item.area, item.id).toBeTruthy();
     }
   });
@@ -99,11 +97,9 @@ describe('数据完整性', () => {
     }
   });
 
-  it('基础物品全部出自某个区域（访客掉落除外）', () => {
+  it('基础物品全部出自某个区域', () => {
     const pooled = new Set(Object.values(AREA_POOLS).flat());
-    const visitorItems = new Set(['note', 'glitter']);
     for (const item of ITEMS.filter((i) => i.kind === 'base')) {
-      if (visitorItems.has(item.id)) continue;
       expect(pooled.has(item.id), item.id).toBe(true);
     }
   });

@@ -6,6 +6,7 @@
  * GameScreen
  * ├── WorldCanvas          // T3，只读 store，写入只走 action
  * ├── Hud                  // 天数 / 阶段 / 缩放 / 背包入口
+ * ├── TutorBar             // T7 引导提示（引导期内占 HintBar 的位置）
  * ├── HintBar              // 左下「缺：能粘的东西」
  * ├── BagDrawer            // 背包 + 双槽合成（≥1024 时常驻右侧栏）
  * └── DialogueBar          // 底部，可上滑收起
@@ -19,11 +20,12 @@
  *    世界层靠引用比较决定是否同步。
  */
 import { useEffect, useMemo, useRef } from 'react';
-import type { AreaId } from '@haola/game-core';
+import { lines, type AreaId } from '@haola/game-core';
 import { lockedAreasFor, useGame } from '../store/gameStore';
 import { WorldCanvas } from '../world/WorldCanvas';
 import { Hud } from '../components/Hud';
 import { HintBar } from '../components/HintBar';
+import { TutorBar } from '../components/TutorBar';
 import { BagDrawer } from '../components/BagDrawer';
 import { DialogueBar } from '../components/DialogueBar';
 
@@ -94,6 +96,20 @@ export function GameScreen() {
   const refreshWorld = useGame((s) => s.refreshWorld);
   const advanceDialog = useGame((s) => s.advanceDialog);
 
+  /**
+   * 走进雾障被弹回。引导期内首次改播引导台词（一次性），之后维持区域台词。
+   * 旗子走瞬态 `markTutorFlag` —— 弹回不是持久化动作，不为它破铁律。
+   */
+  const onAreaBlocked = (area: AreaId) => {
+    const s = useGame.getState();
+    if (s.save.tutorial.step !== 'free' && !s.tutorFlags.blocked) {
+      s.markTutorFlag('blocked');
+      say(lines('tutBlocked'));
+      return;
+    }
+    say([BLOCKED_LINES[area]]);
+  };
+
   const worldRef = useRef<HTMLDivElement | null>(null);
 
   /** 未解锁扇区（画雾障 + 挡人）。按 stage 推导，引用稳定 */
@@ -142,11 +158,12 @@ export function GameScreen() {
           onMoveTo={setMoveTarget}
           onCollect={collect}
           onPlayerPos={setPlayerPos}
-          onAreaBlocked={(area) => say([BLOCKED_LINES[area]])}
+          onAreaBlocked={onAreaBlocked}
         />
       </div>
 
       <Hud />
+      <TutorBar />
       <HintBar />
       <BagDrawer />
       <DialogueBar lines={dialog} index={dialogIndex} onAdvance={advanceDialog} />

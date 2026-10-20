@@ -8,6 +8,8 @@
  * 1. **持久化只发生在 `collect` / `craft` / `doLaunch` / `chooseEnding` / `newGame` 上。**
  *    `setPlayerPos` 每帧被调用，内部只改内存里的 `player`，绝不写 localStorage。
  *    角色坐标、相机、缩放、移动目标都不入存档 —— 刷新后角色回到坠毁点。
+ *    （T7 例外说明：`setMoveTarget` 首次会把 `save.tutorial.step` 在内存里推进一步，
+ *    但不写盘 —— 下次 `collect` / `craft` 连它一起持久化。刷新后这步重来，无损失。）
  * 2. **`player` 没有订阅者。** 它是给 `craft()` 算 `maxDist` 用的，不是给 UI 用的。
  *    谁要是 `useGame((s) => s.player)`，每帧都会重渲染整个界面树。
  *    要给 `WorldCanvas` 的权威位置用 `spawn`（只在开新档/读档时变一次）。
@@ -63,6 +65,8 @@ const DEFAULT_MAX_DIST = 400;
 export type SaveStateV2 = Omit<SaveState, 'scene' | 'areaId' | 'schemaVersion'> & {
   schemaVersion: 2;
   world: PlacedItem[];
+  /** T7 引导状态。入存档，读档续播不重放 */
+  tutorial: TutorialState;
 };
 
 // ───────────────────────── v1 ⇄ v2 适配（唯一的类型边界） ─────────────────────────
@@ -72,8 +76,8 @@ function toCore(save: SaveStateV2): SaveState {
   return { ...save, scene: [], areaId: 'crash' } as SaveState;
 }
 
-/** v1 → v2：剥掉两个废弃字段，接上本次的地面分布 */
-function fromCore(next: SaveState, world: PlacedItem[]): SaveStateV2 {
+/** v1 → v2：剥掉两个废弃字段，接上本次的地面分布与引导进度 */
+function fromCore(next: SaveState, world: PlacedItem[], tutorial: TutorialState): SaveStateV2 {
   return {
     schemaVersion: SAVE_SCHEMA,
     day: next.day,
@@ -89,7 +93,54 @@ function fromCore(next: SaveState, world: PlacedItem[]): SaveStateV2 {
     launchAttempts: next.launchAttempts,
     launchFailures: next.launchFailures,
     world,
+    tutorial,
   };
+}
+
+// ───────────────────────── T7 引导状态机 ─────────────────────────
+
+/**
+ * 引导步骤。卡片状态机 newcomer → firstMove → firstPickup → firstCraft → free，
+ * 其中 firstCraft 与 free 行为一致（都不再提示），实现为「首次合成成功」迁移边。
+ */
+export type TutorialStep = 'newcomer' | 'firstMove' | 'firstPickup' | 'free';
+
+export interface TutorialState {
+  step: TutorialStep;
+  /** 累计拾取次数。到顶强制收尾（卡片验收：第 4 次拾取后不再出任何引导提示） */
+  picks: number;
+}
+
+/** 第 N 次拾取后引导全面静默 */
+export const TUTORIAL_PICK_CAP = 4;
+
+/** 老存档没有 tutorial 字段时的归一值：老玩家直接跳过，不重播 */
+const TUTORIAL_SKIP: TutorialState = { step: 'free', picks: 0 };
+
+/** 读档归一化：缺字段 / 坏形状 / picks 到顶 → 跳过引导 */
+function readTutorial(raw: unknown): TutorialState {
+  if (!raw || typeof raw !== 'object') return TUTORIAL_SKIP;
+  const t = raw as Partial<TutorialState>;
+  const step: TutorialStep =
+    t.step === 'newcomer' || t.step === 'firstMove' || t.step === 'firstPickup'
+      ? t.step
+      : 'free';
+  const picks =
+    typeof t.picks === 'number' && Number.isFinite(t.picks) && t.picks > 0
+      ? Math.floor(t.picks)
+      : 0;
+  if (step !== 'free' && picks >= TUTORIAL_PICK_CAP) return { step: 'free', picks };
+  return { step, picks };
+}
+
+/** 状态机推进。已在 free 的不动；craft 一刀切到 free */
+function advanceTutorial(t: TutorialState, on: 'move' | 'pickup' | 'craft'): TutorialState {
+  if (t.step === 'free') return t;
+  if (on === 'craft') return { ...t, step: 'free' };
+  if (on === 'move') return t.step === 'newcomer' ? { ...t, step: 'firstMove' } : t;
+  const picks = t.picks + 1;
+  if (picks >= TUTORIAL_PICK_CAP) return { ...t, picks, step: 'free' };
+  return { ...t, picks, step: 'firstPickup' };
 }
 
 // ───────────────────────── 持久化 ─────────────────────────
@@ -129,7 +180,7 @@ function readSavedGame(): SaveStateV2 | null {
       world.push(it);
     }
 
-    return { ...(parsed as SaveStateV2), world };
+    return { ...(parsed as SaveStateV2), world, tutorial: readTutorial(parsed.tutorial) };
   } catch {
     return null;
   }
@@ -200,6 +251,11 @@ interface GameStore {
   viewing: string | null;
   /** 背包抽屉 / 网页侧栏的展开态 */
   bagOpen: boolean;
+  /**
+   * T7 一次性事件台词的防重旗（不入存档）。
+   * 引导期内「首次合错 / 首次被雾障弹回」各只说一次；刷新后可能重来一次，可接受。
+   */
+  tutorFlags: { wrong: boolean; blocked: boolean };
 
   // ── 世界（不持久化，契约 §3.2）──
   /** 角色实时位置。每帧更新，**没有订阅者**，别拿它渲染 */
@@ -231,6 +287,8 @@ interface GameStore {
 
   advanceDialog: () => void;
   say: (text: string[]) => void;
+  /** T7：标记一次性事件台词已播过（瞬态，不持久化） */
+  markTutorFlag: (key: 'wrong' | 'blocked') => void;
   view: (id: string | null) => void;
   showToast: (title: string, body?: string) => void;
   dismissToast: () => void;
@@ -257,7 +315,7 @@ export const useGame = create<GameStore>((set, get) => {
   };
 
   return {
-    save: fromCore(createInitialState(), []),
+    save: fromCore(createInitialState(), [], TUTORIAL_SKIP),
     screen: 'start',
     slots: [null, null],
     toast: null,
@@ -265,6 +323,7 @@ export const useGame = create<GameStore>((set, get) => {
     dialogIndex: 0,
     viewing: null,
     bagOpen: false,
+    tutorFlags: { wrong: false, blocked: false },
 
     player: spawnPoint(),
     spawn: spawnPoint(),
@@ -276,8 +335,8 @@ export const useGame = create<GameStore>((set, get) => {
     newGame: () => {
       const spawn = spawnPoint();
       const base = createInitialState();
-      const world = redistribute(fromCore(base, []), spawn, DEFAULT_MAX_DIST);
-      const save: SaveStateV2 = fromCore(base, world);
+      const world = redistribute(fromCore(base, [], TUTORIAL_SKIP), spawn, DEFAULT_MAX_DIST);
+      const save: SaveStateV2 = fromCore(base, world, { step: 'newcomer', picks: 0 });
       persist(save);
       set({
         save,
@@ -288,6 +347,7 @@ export const useGame = create<GameStore>((set, get) => {
         dialogIndex: 0,
         viewing: null,
         bagOpen: false,
+        tutorFlags: { wrong: false, blocked: false },
         player: spawn,
         spawn,
         moveTarget: null,
@@ -312,6 +372,7 @@ export const useGame = create<GameStore>((set, get) => {
         dialogIndex: 0,
         viewing: null,
         bagOpen: false,
+        tutorFlags: { wrong: false, blocked: false },
         player: spawn,
         spawn,
         moveTarget: null,
@@ -323,7 +384,20 @@ export const useGame = create<GameStore>((set, get) => {
 
     // ── 世界（T3 调用）──
 
-    setMoveTarget: (x, y) => set({ moveTarget: { x, y } }),
+    setMoveTarget: (x, y) => {
+      const s = get();
+      // T7：首次点地面 = newcomer → firstMove。
+      // 只改内存不持久化（铁律：持久化只在五个动作上）——下次 collect/craft 会连它一起写盘。
+      // 引导中途刷新的话这一步会重来，角色反正也回出生点，可接受。
+      if (s.save.tutorial.step === 'newcomer') {
+        set({
+          moveTarget: { x, y },
+          save: { ...s.save, tutorial: advanceTutorial(s.save.tutorial, 'move') },
+        });
+        return;
+      }
+      set({ moveTarget: { x, y } });
+    },
 
     /**
      * 每帧被调用。**内部绝不持久化**，也绝不碰 `save`。
@@ -346,6 +420,10 @@ export const useGame = create<GameStore>((set, get) => {
       const item = getItem(placed.id);
       const nextWorld = world.filter((it) => it.uid !== uid);
 
+      // T7：引导期内第一次捡（此时 step 还是 newcomer / firstMove）→ 播一次性台词
+      const isFirstPickup =
+        save.tutorial.step === 'newcomer' || save.tutorial.step === 'firstMove';
+
       const next: SaveStateV2 = {
         ...save,
         bag: addItem(save.bag, placed.id),
@@ -360,10 +438,16 @@ export const useGame = create<GameStore>((set, get) => {
             : `又捡到一个「${item.name}」。`,
         }),
         world: nextWorld,
+        tutorial: advanceTutorial(save.tutorial, 'pickup'),
       };
 
       commit(next);
       if (firstTime) get().showToast(item.name, item.desc);
+      if (isFirstPickup) {
+        // 追加而不是替换：别把开场的 start 台词顶掉
+        const queued = get().dialog;
+        get().say(queued.length > 0 ? [...queued, ...lines('tutPickup')] : lines('tutPickup'));
+      }
     },
 
     // ── 玩法（T4 调用）──
@@ -375,6 +459,13 @@ export const useGame = create<GameStore>((set, get) => {
 
       const res = craft(toCore(save), a, b);
       if (!res.ok) {
+        // T7：引导期内首次合错，播一次性台词（瞬态旗防重，不入存档）
+        const s = get();
+        if (s.save.tutorial.step !== 'free' && !s.tutorFlags.wrong) {
+          get().markTutorFlag('wrong');
+          const queued = s.dialog;
+          get().say(queued.length > 0 ? [...queued, ...lines('tutWrong')] : lines('tutWrong'));
+        }
         get().showToast('合成不了', res.reason);
         return;
       }
@@ -403,8 +494,12 @@ export const useGame = create<GameStore>((set, get) => {
         );
       }
 
+      // T7：引导期内首次合成成功 → 状态机收尾，庆祝台词插到结果台词最前面
+      const wasGuiding = save.tutorial.step !== 'free';
+      if (wasGuiding) dialog = [...lines('tutCraft'), ...dialog];
+
       // 时间由合成推进（契约 §7）：第 7 天访客改为「当天首次合成后」触发
-      let next = fromCore(res.state, save.world);
+      let next = fromCore(res.state, save.world, advanceTutorial(save.tutorial, 'craft'));
       if (next.day === 7) {
         next = {
           ...next,
@@ -502,7 +597,7 @@ export const useGame = create<GameStore>((set, get) => {
       if (mode === 'none') return;
 
       const res = attemptLaunch(toCore(save));
-      const next = fromCore(res.state, save.world);
+      const next = fromCore(res.state, save.world, save.tutorial);
       if (res.ok) {
         commit(next, { screen: 'ending', dialog: lines('launchSuccess'), dialogIndex: 0 });
       } else {
@@ -513,7 +608,7 @@ export const useGame = create<GameStore>((set, get) => {
 
     chooseEnding: (ending) => {
       const { save } = get();
-      commit(fromCore(finishGame(toCore(save), ending), save.world), {
+      commit(fromCore(finishGame(toCore(save), ending), save.world, save.tutorial), {
         screen: 'ending',
       });
     },
@@ -528,6 +623,9 @@ export const useGame = create<GameStore>((set, get) => {
     },
 
     say: (text) => set({ dialog: text, dialogIndex: 0 }),
+
+    markTutorFlag: (key) =>
+      set((s) => ({ tutorFlags: { ...s.tutorFlags, [key]: true } })),
 
     view: (id) => set({ viewing: id }),
 
@@ -557,21 +655,22 @@ export const useGame = create<GameStore>((set, get) => {
         /* ignore */
       }
       const spawn = spawnPoint();
-      set({
-        save: fromCore(createInitialState(), []),
-        world: [],
-        screen: 'start',
-        slots: [null, null],
-        dialog: [],
-        dialogIndex: 0,
-        toast: null,
-        viewing: null,
-        bagOpen: false,
-        player: spawn,
-        spawn,
-        moveTarget: null,
-        zoom: 1,
-      });
+  set({
+    save: fromCore(createInitialState(), [], TUTORIAL_SKIP),
+    world: [],
+    screen: 'start',
+    slots: [null, null],
+    dialog: [],
+    dialogIndex: 0,
+    toast: null,
+    viewing: null,
+    bagOpen: false,
+    tutorFlags: { wrong: false, blocked: false },
+    player: spawn,
+    spawn,
+    moveTarget: null,
+    zoom: 1,
+  });
     },
   };
 });

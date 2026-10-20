@@ -404,7 +404,11 @@ function mountRuntime(app: Application, host: HTMLDivElement, propsRef: PropsRef
     }
     // reduced-motion：停走路循环，只保留位移（定格第 2 帧）
     if (reduced) step = PLAYER_STAND_STEP;
-    if (dir !== paintedDir || step !== paintedStep) {
+    // 纹理是异步栅格化的：首帧大概率还没好，`updatePlayerFrame` 会直接 return。
+    // 所以这里除了 (dir, step) 变化，还要在「还没贴上第一张图」时重试 ——
+    // 否则站着不动的玩家（dir/step 永远不变）会永远只剩一个贴地阴影。
+    // 物品贴纸没有这个问题：ItemField.tick 每帧重试 applyTexture。
+    if (dir !== paintedDir || step !== paintedStep || !playerNode.sprite.visible) {
       paintedDir = dir;
       paintedStep = step;
       updatePlayerFrame(playerNode, dir, step);

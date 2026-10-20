@@ -32,7 +32,7 @@ export function StartScreen() {
           </button>
         )}
       </div>
-      <div className="start__hint">搜索和合成都会花掉一天。不会死，只会变老。</div>
+      <div className="start__hint">合成一次算一天。不会死，只会变老。</div>
     </div>
   );
 }

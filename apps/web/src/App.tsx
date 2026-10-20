@@ -13,7 +13,8 @@ export default function App() {
 
   return (
     <>
-      <div className="shell">
+      {/* 主界面要占满视口，不能被 v1 的 560px 内容列宽夹住 */}
+      <div className={`shell ${screen === 'game' ? 'shell--full' : ''}`}>
         {screen === 'start' && <StartScreen />}
         {screen === 'game' && <GameScreen />}
         {screen === 'ending' && <EndingScreen />}

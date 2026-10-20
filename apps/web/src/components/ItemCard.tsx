@@ -37,7 +37,8 @@ export function ItemCard({ id, count, selected, onClick, onHelp, showHelp }: Pro
         </span>
       )}
       {count !== undefined && count > 1 && <span className="item__count">{count}</span>}
-      <ItemIcon icon={item.icon} color={item.color} />
+      {/* 走 id 出口：与地面贴纸共用同一份形状数据（契约 §5.2），不另写一套 */}
+      <ItemIcon id={id} />
       <span className="item__name">{item.name}</span>
     </button>
   );

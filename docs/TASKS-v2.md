@@ -59,6 +59,48 @@ pnpm --filter @haola/web typecheck
 
 ---
 
+## 0.5 接手须知（2026-10-20 追加，新对话**必读**）
+
+> 这一节记录的是**踩过才知道的坑**，正文里查不到。开新对话的专家必须先读这一节。
+
+### 已提交的进度
+
+| 任务 | commit | 备注 |
+|---|---|---|
+| T0 契约 | `84dd5e7` | `docs/CONTRACT-v2.md`，§4.1 已按 T3 实际 props 重写 |
+| T5 规则 | `6eb2cfe` `017e2f9` | `world.ts` 空间分布 + 硬保底 |
+| T2 美术 | `07c5c4c` `1ac2c7c` `2a2f2b7` | 批 0 色盘/校验、批 1 地形 17 张、批 2 小人 4向×6帧 |
+| T3 世界层 | `68cac73` | 五层容器 / 相机 / 输入 / 地形摆放 / 雾障 |
+| T4 界面层 | `2a2f2b7` | store v2 + HUD/抽屉/合成槽 + 三档响应式 |
+
+**下一个任务：T6（内容扩容）→ 然后 T7（引导）。**
+
+### 会咬人的坑（全部实测过）
+
+1. **SVG 里禁止 `var()`**。SVG 作为图片/Pixi 纹理加载时 CSS 变量是无效属性值：`fill` 回退成黑、`stroke` 回退 none、开放路径变实心黑块。色值一律从 `world/assets/palette.ts` 取字面 hex。
+2. **`vitest` 在沙箱里会静默丢测试文件**。`EPERM` 导致文件从收集里消失，**退出码仍是 0**（假绿）。验收必须核对「**5 文件 / 60 用例**」，不能只看 exit code，连跑几次会得到不同文件数。
+3. **异步纹理 + 帧变化守卫 = 图永远不显示**。T4 之前的 `updatePlayerFrame` 只在 `(dir, step)` 变化时贴图，首帧纹理未到就 return，静止玩家永远只剩贴地阴影。**任何「变化才更新」的渲染逻辑，都要有 `|| !sprite.visible` 之类的重试**。物品贴纸 `ItemField.tick` 本来就有这个重试。
+4. **`vite build` 的 `base` 是 `/track-trash/`**（GitHub Pages）。本地验收要用 **dev server**；`VITE_BASE=/` 会被 Git Bash 的路径转换吃掉。
+5. **Pixi 8 的一个 `Graphics` 只能放一条环带**。连续 `poly().fill()` 会把先前子路径当成孔洞，每条环带要独立实例。
+6. **地形资产的 fill 不能再用 `PALETTE.paper`**（星球本体也是 paper，会读成纯线稿）。山用 `planetShade`、石用 `cream`。
+7. **SVG 资产校验用 `node scripts/check-assets.mjs`**，四条断言（A 色值镜像 / B icon 覆盖 / C 无孤立形状 / D 60 组互不撞脸），合并前必跑。
+8. **内容校验用 `node scripts/check-content.mjs`**（T6 用）。零依赖，正则读 TS 源码，**不要改成 import game-core**（TS 没有运行时，加 esbuild 就破坏零依赖约定）。配方对象**没有 `id` 字段**（写法是 `{ a, b, out }`），所以它靠 `a` 定位对象。
+9. **`kind: 'accident'` 与 `'keepsake'` 不进配方表是设计使然**，别当孤立物品去"修"——`check-content.mjs` 已把它们排除在断言 A 之外。
+
+### 视觉验收怎么做（不能只信测试）
+
+测试全绿 ≠ 画面对。T4 的静止玩家 bug 就是测试、typecheck、`consoleErrors: none` 全过、只有看截图才发现的。
+
+```bash
+# 1. 起 dev server
+cd apps/web && ./node_modules/.bin/vite --port 5176
+# 2. 跑截图 + 热区审计（375/1280 两档）
+node scripts/t4-shots.mjs http://127.0.0.1:5176/
+```
+产物在 `shots/`。截图脚本自带 `scrollWidth` 与「所有可点元素 ≥44×44」审计，**不要手改它的 inset 计算**——曾经因为只处理单值 `inset` 而误报。
+
+---
+
 ## 1. 任务总表
 
 分四组。**规模**是给人判断工作量用的，不是承诺工时。
@@ -133,6 +175,7 @@ Wave 5                                  └── T10 性能与发布
 | `docs/design/DESIGN-SYSTEM.md` `preview.html` | T1 | — |
 | `docs/design/ASSETS.md` `assets-gallery.html` | T2 | T3/T4 只读 |
 | `scripts/check-assets.mjs` | T2 | 新增，零依赖；校验色值同源 + 物品全覆盖 |
+| `scripts/check-content.mjs` | T6 | 新增，零依赖；校验孤立物品 + 单来源标签 |
 | `apps/web/src/world/assets/palette.ts` | T2 | T3 只读，用它取色，禁止自己写 hex |
 | `docs/content/**` | T6 | — |
 | `apps/api/**` | T8 | — |
@@ -394,18 +437,26 @@ export function itemSvgMarkup(id: string): string;                            //
 - `docs/content/CONTENT.md`：物品总表 + 标签分布统计 + 每条配方的可达性验证
 
 **验收**
-- `pnpm --filter @haola/game-core test` 全绿（现有 1000 种子通关测试不能退化）
+- `node scripts/check-content.mjs` 全绿（A 无孤立物品 / B 每标签 ≥2 来源）
+- `pnpm --filter @haola/game-core test` 全绿，**5 文件 / 60 用例**不能退化
 - 每个新物品都至少出现在一个区域池里，且至少有一条配方或阶段目标用到它
-- 没有孤立物品（只能捡到、永远用不上）
 - 标签分布统计里，每个阶段所需标签至少有 2 个来源物品
+
+**开工前先修的存量缺陷**（`check-content.mjs` 已查出，是真 bug，不是误报）
+1. **`note`（外星留言条）和 `glitter`（亮片胶水）缺 `area:` 字段** —— 它们是 `base` 物品却刷不出来，玩家永远捡不到
+2. **三个标签各只有 1 件物品带它**：`粘`（只有 `tape`）、`能推`（只有 `plunger`）、`能烧`（只有 `fuel`）。一旦某阶段需要这些标签，硬保底只能刷出那唯一一件，玩家用掉即死锁。新增物品时优先给这三个标签各补 2–3 个来源
 
 **禁止**：改已有物品的 `id` 与语义（存档兼容）；改 `resolve.ts`；改 UI
 
 **开场提示词**
 ```
-读 C:\Users\E14\WorkBuddy\好垃\docs\TASKS-v2.md 的 §0 和 T6 卡片，以及 packages/game-core/src/items.ts、stages.ts。
+读 C:\Users\E14\WorkBuddy\好垃\docs\TASKS-v2.md 的 §0、§0.5（接手须知，必读）和 T6 卡片，
+以及 docs/CONTRACT-v2.md、packages/game-core/src/items.ts、stages.ts。
 你是游戏策划/内容设计专家，负责物品、配方、台词、支线，不写代码逻辑。
 硬规则：只能新增 id，不能改已有 id，否则老存档坏掉。
+
+第一步先跑 `node scripts/check-content.mjs` 看存量缺陷（已知 note/glitter 缺 area、
+粘/能推/能烧 三个标签单来源），把这些一并修掉，再谈扩容。
 先给我一份新增物品清单（id/名称/标签/所属区域/用途），我确认后再落代码。
 ```
 

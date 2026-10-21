@@ -419,6 +419,84 @@ describe('阶段 3 三步目标链（正式内容）', () => {
     expect(culprits).toEqual([]);
   });
 
+  it('⑧f 载体的完整依赖链上，每层中间产物在每个阶段都有可命中步位', () => {
+    // ⚠️ C2 批次补 QA 提的断言缺口。
+    //
+    // 原来的 ⑧d 只验「载体自身的直接配方」（`r.a + r.b → carrier`）。
+    // 但载体往往**不是**一步做出来的 —— 它的材料本身可能是合成产物：
+    //   log_q1  ← 什么 ← 什么 ← base
+    // 中间层如果被阶段目标截胡，玩家就**永远拿不到材料**，
+    // 载体那条配方再安全也没用 —— ⑧d 会漏掉这一层。
+    //
+    // 所以这里把断言扩到「载体的完整依赖链」：
+    // 对每件载体的每层中间产物，断言「每个阶段至少存在一个步位能命中它」。
+    //
+    // 判定口径与 ⑧d 一致：**不要求任何步位都不被截胡**（阶段目标优先于精确配方
+    // 是正常设计），只要求「永远有一条路能走」。
+    //
+    // 「命中」的口径：一个产物可能有多条配方（`RECIPES` 里同产物多条）。
+    // 只要**任意一条配方**在某个步位能产出它，就算可达 ——
+    // 玩家可以换配方做，硬绑某一条配方会误报。
+    const producersOf = new Map<string, { a: string; b: string }[]>();
+    for (const r of RECIPES) {
+      const list = producersOf.get(r.out) ?? [];
+      list.push({ a: r.a, b: r.b });
+      producersOf.set(r.out, list);
+    }
+
+    /** 某产物在指定阶段是否可达（任意配方 × 任意步位命中） */
+    const reachableInStage = (out: string, stage: 1 | 2 | 3): number[] => {
+      const steps = STAGES[stage - 1]!.steps;
+      const safe: number[] = [];
+      for (const r of producersOf.get(out) ?? []) {
+        for (let stepIndex = 0; stepIndex < steps.length; stepIndex++) {
+          const { result } = resolveMix(r.a, r.b, at(stage, stepIndex));
+          if (result.output === out) {
+            safe.push(stepIndex + 1);
+            break; // 该配方在此阶段可用即可
+          }
+        }
+      }
+      return [...new Set(safe)].sort((x, y) => x - y);
+    };
+
+    const culprits: string[] = [];
+    for (const log of LOGS) {
+      // 从载体往下 BFS，逐层展开依赖链
+      const seen = new Set<string>([log.carrierId]);
+      const queue: string[] = [log.carrierId];
+      const intermediates: string[] = [];
+      while (queue.length) {
+        const id = queue.shift()!;
+        const producers = producersOf.get(id);
+        if (!producers) continue; // base 物品：可直接捡，永远可达
+        // 这层产物自己就是「中间产物」（载体的材料 / 材料的材料…）
+        if (id !== log.carrierId) intermediates.push(id);
+        for (const r of producers) {
+          for (const m of [r.a, r.b]) {
+            if (!seen.has(m)) {
+              seen.add(m);
+              queue.push(m);
+            }
+          }
+        }
+      }
+
+      // 每层中间产物：每个阶段至少一个可命中步位
+      for (const mid of intermediates) {
+        for (const stage of [1, 2, 3] as const) {
+          const safe = reachableInStage(mid, stage);
+          if (safe.length === 0) {
+            culprits.push(
+              `${log.carrierId} 的中间产物 ${mid} 在阶段 ${stage} 的所有步位都被截胡（无任何可命中步位）`,
+            );
+          }
+        }
+      }
+    }
+    expect(culprits).toEqual([]);
+  });
+
   it('⑧e 阶段 3 走完后回归纯配方判定，8 件日志载体仍可合成', () => {
     // buildDone 之后 stepIndex = 3 = steps.length → 内层守卫放行。
     // 这条是「建设期完成后还能不能补合日志载体」的保证：

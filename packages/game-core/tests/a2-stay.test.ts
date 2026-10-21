@@ -125,9 +125,17 @@ describe('A2 · 第四支线 stay', () => {
     expect(list).toContain('free');
   });
 
-  it('⑫ ngPlus 字段：新档为 false，且进 SaveState 类型', () => {
+  it('⑫ ngPlus 字段：新档为一周目空档案，且进 SaveState 类型', () => {
     const s = createInitialState();
-    expect(s.ngPlus).toBe(false);
+    // ⚠️ C2 批次：`ngPlus` 从布尔语义位扩成**对象容器**（cycle / endings /
+    // readLogs / branchesHistory）。这里断言**完整的期望对象**而不是单个字段 ——
+    // 只断言 `cycle` 会漏掉「三个集合被误初始化」这类回归。
+    expect(s.ngPlus).toEqual({
+      cycle: 1,
+      endings: [],
+      readLogs: [],
+      branchesHistory: [],
+    });
     // 不 bump schemaVersion（本批只加字段，老档走归一化）
     expect(s.schemaVersion).toBe(1);
     // branches 初始形状含 stay

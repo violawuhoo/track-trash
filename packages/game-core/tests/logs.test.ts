@@ -77,12 +77,115 @@ describe('C1 · 前任日志内容', () => {
     }
   });
 
-  it('③ 拼合点只出现在 L2 / L4 / L6 / L8（第 8 篇不给「前任后来怎样」的答案）', () => {
+  it('③ 拼合点只出现在 L4 / L6 / L8（GDD §6.4：P1 已取消）', () => {
+    // 拼合点的判据（GDD §6.4，方案 B）：
+    // 1. 必须**跨篇** —— 结论不能被任一单篇独立支撑；
+    // 2. 必须**有增量** —— 读到本篇之前，玩家无法完整说出这条结论；
+    // 3. **触发篇必须是提供新端的那一篇**。
+    //
+    // 按这三条，8 篇里成立的只有 P2 / P3 / P4（即 L4 / L6 / L8）。
+    // P1 不成立：它的两端都在 L1 之内（「船上原本两个人。我在这儿。」/
+    // 「如果你读到这段，说明我是那个没走的。」），而 L2 是燃料消耗表、
+    // 不提供任何相关新信息 —— 它是复述，不是揭示。
     const withPuzzle = LOGS.filter((l) => l.puzzle).map((l) => l.id);
-    expect(withPuzzle).toEqual(['L2', 'L4', 'L6', 'L8']);
+    expect(withPuzzle).toHaveLength(3);
+    expect(withPuzzle).toEqual(['L4', 'L6', 'L8']);
+
+    // L2 明确没有拼合点（GDD §6.4：P1 已取消）。
+    // 单独点名断言，防止有人把它挪回 L2。
+    expect(LOG_BY_ID.L2, 'L2 不得有拼合点（P1 已取消）').toBeDefined();
+    expect('puzzle' in LOG_BY_ID.L2!, 'L2 不得有 puzzle 字段（P1 已取消）').toBe(false);
+    expect(LOG_BY_ID.L2!.puzzle).toBeUndefined();
+
     // L7 的末段必须断在「如果它会死——」，不能给答案
     const l7 = LOG_BY_ID.L7!;
     expect(l7.paragraphs[l7.paragraphs.length - 1]).toBe('如果它会死——');
+  });
+
+  /**
+   * ③c 内容层断言：**拼合点必须是正文没直说的新结论，而不是正文的复述。**
+   *
+   * 上面那条「只有 L4/L6/L8 有」是**列表断言**，防不住「换个篇号再挂一个复述上去」。
+   * 这一条从**内容**上守 GDD §6.4 的三条判据：
+   *
+   * - **判据 1（跨篇）**：拼合点的结论必须由**至少两篇**正文共同支撑。
+   *   「一篇正文就能把它说全」→ 那不是拼合点。
+   * - **判据 3（触发篇提供新端）**：拼合点**自己所在的那一篇**必须对这条结论有实质贡献
+   *   （它是新端的来源）。否则它是「别处结论的搬运」，不是拼合点。
+   *
+   * 度量方式：把文本归一化（去空白与标点）后切 3-gram，算「拼合点的 3-gram 有多少比例
+   * 出现在某篇正文里」。**为什么用 3-gram 而不是逐字包含**：
+   * 逐字包含只能抓住「原句照抄」，抓不住「同一件事换个说法」；
+   * 3-gram 覆盖率能抓住「说法不同但内容重合」。
+   *
+   * 阈值 0.05 是**实测校准**出来的（不是拍的）：
+   * L4 = 0.100 / L6 = 0.118 / L8 = 0.214（触发篇自身覆盖率，全部 ≥ 0.05）；
+   * 而被删掉的 P1 文本若挂回 L2，L2 自身覆盖率 = 0.000 —— **低于阈值，断言红**。
+   * 所以这条断言对「把 P1 挪回去」这个具体变异**有真实杀伤力**。
+   */
+  it('③c 拼合点必须跨篇、且由它自己所在的那一篇提供新端（防复述回流）', () => {
+    /** 归一化：去空白与中英文标点，只留实义字符 */
+    const norm = (t: string): string =>
+      t.replace(/[\s，。；：、！？「」『』（）()《》〈〉—…,.;:!?"'·]/g, '');
+
+    /** 3-gram 列表 */
+    const grams = (t: string): string[] => {
+      const s = norm(t);
+      const out: string[] = [];
+      for (let i = 0; i + 3 <= s.length; i += 1) out.push(s.slice(i, i + 3));
+      return out;
+    };
+
+    /** 「拼合点的 3-gram 有多少比例出现在 body 里」 */
+    const coverage = (puzzle: string, body: string): number => {
+      const g = grams(puzzle);
+      if (g.length === 0) return 1;
+      const bodyGrams = new Set(grams(body));
+      return g.filter((x) => bodyGrams.has(x)).length / g.length;
+    };
+
+    /** 一篇正文里是否**逐字**包含整条拼合点 */
+    const containsVerbatim = (puzzle: string, body: string): boolean =>
+      body.includes(puzzle);
+
+    const THRESHOLD = 0.05;
+
+    for (const log of LOGS) {
+      const puzzle = log.puzzle;
+      if (!puzzle) continue;
+
+      const own = coverage(puzzle, log.paragraphs.join(''));
+      const perLog = LOGS.map((l) => ({
+        id: l.id,
+        c: coverage(puzzle, l.paragraphs.join('')),
+      }));
+
+      // 判据 3：触发篇必须是提供新端的那一篇。
+      expect(
+        own,
+        `${log.id} 的拼合点在自己这篇正文里几乎没有支撑（${own.toFixed(3)} < ${THRESHOLD}）` +
+          `—— 它是别处结论的搬运，不是拼合点`,
+      ).toBeGreaterThanOrEqual(THRESHOLD);
+
+      // 判据 1：必须跨篇 —— 至少两篇正文对它有实质支撑。
+      const supporters = perLog.filter((x) => x.c >= THRESHOLD).map((x) => x.id);
+      expect(
+        supporters.length,
+        `${log.id} 的拼合点只被 ${supporters.join(',') || '（无）'} 支撑` +
+          `—— 结论不能被任一单篇独立支撑，它必须跨篇`,
+      ).toBeGreaterThanOrEqual(2);
+
+      // 逐字复述检查：拼合点不能是**任何**一篇正文里某一段的原文。
+      // （覆盖度检查抓「换个说法」，这条抓「原句照抄」。）
+      for (const l of LOGS) {
+        for (const para of l.paragraphs) {
+          expect(
+            containsVerbatim(puzzle, para),
+            `${log.id} 的拼合点在 ${l.id} 的正文里被逐字复述了`,
+          ).toBe(false);
+        }
+      }
+    }
   });
 
   it('③b 正文逐字来自 GDD §6.3（唯一真源，改 GDD 必须同步改这里）', () => {

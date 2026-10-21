@@ -1614,6 +1614,11 @@ button:focus:not(:focus-visible) {
   color: var(--ink-soft);
 }
 
+/* 「——」之后的后果说明用次要色，让字段名是视觉主体（定稿 §1.2） */
+.ngplus__note {
+  color: var(--ink-soft);
+}
+
 .ngplus__list--gain li {
   display: flex;
   flex-direction: column;

@@ -246,6 +246,66 @@ describe('B. startNextCycle（保留 / 重置清单，GDD §7.1）', () => {
     }
   });
 
+  /**
+   * B7（2026-10-22 文案定稿）：清单文案必须**逐字等于定稿**。
+   *
+   * 真源：`docs/design/CONTENT-v3-NGPLUS-UI-COPY.md` §1（保留 K1–K5）/ §2（重置 R1–R8）。
+   * 定稿里 `【N】` 是待插入的计数占位符，`note` 是「——」之后的后果说明。
+   *
+   * 为什么要逐字断言：这一页的**全部意义**就是「把你会失去什么摆出来」。
+   * 措辞被改动（哪怕是标点）玩家读到的意思就变了，而改文案这件事
+   * 应该走「文策渊改定稿 → 同步这里」的流程，不该由工程随手改。
+   */
+  it('B7 清单文案逐字等于定稿（CONTENT-v3-NGPLUS-UI-COPY §1 / §2）', () => {
+    expect(
+      NEXT_CYCLE_KEPT.map((b) => [b.text, b.note ?? null]),
+    ).toEqual([
+      ['已解锁的结局（【N】个）', '那几格不会灭'],
+      ['读过的前任记录（【N】篇）', '读过的不用再读一遍'],
+      ['走过的支线（【N】条）', '面板上会标出「上次走过」'],
+      ['纪念品（【N】件）', '你拿到的东西不会丢'],
+      ['这是你的第 【N】 周目', null],
+    ]);
+    expect(
+      NEXT_CYCLE_RESET.map((b) => [b.text, b.note ?? null]),
+    ).toEqual([
+      ['背包、地面上捡到过的东西、天数', '回到坠毁点的第 1 天'],
+      ['阶段进度', '回到第一个阶段的第 1 步，建设期得重新走满'],
+      ['已完成的支线', '但还是得重新做一遍'],
+      ['累计合成次数', '上周目没读完的那几篇记录，要重新攒次数才能读'],
+      ['这一周拿到的记录载体', '载体是要用掉的，不带过去'],
+      ['意外次数与这一周的世界日志', null],
+      ['本周目的结局', '结局本身已经记在「已解锁的结局」里了'],
+      ['起飞尝试与失败的次数', null],
+    ]);
+  });
+
+  /**
+   * B8（2026-10-22 定稿）：R4 / R5 不可合并，且措辞不得过度承诺。
+   *
+   * - R4 必须含「上周目**没读完的**那几篇」这个限定语，
+   *   且**不许**写成「所有记录」——那是错的（`readLogs` 跨周目保留）。
+   * - R4 必须点名「建设期得重新走满」（`buildDone` 后果，
+   *   不点名玩家会发现第四支线不见了，以为是 bug）。
+   */
+  it('B8 R4 / R5 的措辞边界（定稿 §2.2 / §2.3）', () => {
+    const crafts = NEXT_CYCLE_RESET.find((b) => b.fields.includes('crafts'))!;
+    const logsFound = NEXT_CYCLE_RESET.find((b) => b.fields.includes('logsFound'))!;
+    const buildDone = NEXT_CYCLE_RESET.find((b) => b.fields.includes('buildDone'))!;
+
+    // R4
+    expect(crafts.note).toContain('上周目没读完的那几篇');
+    expect(crafts.note).not.toContain('所有记录');
+    expect(crafts.note).not.toContain('重新攒次数才能读「所有');
+    // R5
+    expect(logsFound.note).toContain('载体');
+    expect(logsFound.note).toContain('不带过去');
+    // R4 与 R5 必须是两条（后果不同，不可合并）
+    expect(crafts.text).not.toBe(logsFound.text);
+    // buildDone 的后果必须被点名
+    expect(buildDone.note).toContain('建设期得重新走满');
+  });
+
   it('B6 清单必须点名 crafts / logsFound / branchesHistory（QA 指名的三个漏项）', () => {
     // 这三个字段是 2026 QA 复审点名的漏项：
     // - `crafts` 归零卡住 L1（合成 3 次）与 L5（合成 14 次）的解锁

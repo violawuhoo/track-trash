@@ -25,6 +25,13 @@
  * `logsFound` —— 而 `crafts` 归零**直接卡住 L1（需合成 3 次）与 L5（需合成 14 次）
  * 的解锁**。玩家看完清单以为二周目能直接重读 L1–L5，实际上要重新攒次数。
  *
+ * ### 文案是定稿
+ *
+ * 三段逐行文案（保留 K1–K5 / 重置 R1–R8 / 增益 G1–G4）由文策渊定稿，
+ * 真源是 `docs/design/CONTENT-v3-NGPLUS-UI-COPY.md`。
+ * core 的清单里 `text` 字段带 `【N】` 占位符，`note` 字段是「——」之后的后果说明，
+ * 本文件只做「插值 + 排版」，**不改一个字**。
+ *
  * ### 修法：清单搬到 core，不再手写
  *
  * 手写清单必然漂移（改 core 的人不会记得去改 UI 的清单）。
@@ -38,11 +45,11 @@
  *
  * | 字段                | 含义                          | 玩家看到的说法              |
  * |---------------------|-------------------------------|-----------------------------|
- * | `ngPlus.cycle`      | 周目序号 **+1**（唯一变化点）  | 标题「第 N 周目」            |
- * | `ngPlus.endings`    | 已解锁的结局                  | 「已解锁的结局」            |
- * | `ngPlus.readLogs`   | 读过的前任记录（G1 靠它）     | 「读过的前任记录」          |
- * | `ngPlus.branchesHistory` | 走过的支线（G3 靠它标「上次走过」） | 「走过的支线」        |
- * | `keepsakes`         | 纪念品（GDD §7.5：全部保留）  | 「纪念品」                  |
+ * | `ngPlus.cycle`      | 周目序号 **+1**（唯一变化点）  | 「这是你的第 N 周目」        |
+ * | `ngPlus.endings`    | 已解锁的结局                  | 「已解锁的结局（N 个）」     |
+ * | `ngPlus.readLogs`   | 读过的前任记录（G1 靠它）     | 「读过的前任记录（N 篇）」   |
+ * | `ngPlus.branchesHistory` | 走过的支线（G3 靠它标「上次走过」） | 「走过的支线（N 条）」 |
+ * | `keepsakes`         | 纪念品（GDD §7.5：全部保留）  | 「纪念品（N 件）」           |
  *
  * ### 重置（`startNextCycle` 清零 / 归位）
  *
@@ -118,7 +125,7 @@ const GAINS: readonly { id: string; name: string; text: string }[] = [
   {
     id: 'G2',
     name: '你有点手艺',
-    text: '第一个阶段的目标会多给一行可行的配对示例。',
+    text: '第一个阶段的目标会多给一行提示 —— 这步要哪两个标签、可能拿什么凑。',
   },
   {
     id: 'G3',
@@ -128,17 +135,9 @@ const GAINS: readonly { id: string; name: string; text: string }[] = [
   {
     id: 'G4',
     name: '石头记得你',
-    text: '第一天捡到会唱歌的石头时，它会多唱一句给你听。',
+    text: '新的周目里第一次捡到会唱歌的石头时，它会少唱一遍。',
   },
 ];
-
-/** 计数单位（「N 个」里的单位字） */
-const COUNT_UNITS: Record<string, string> = {
-  endings: '个',
-  readLogs: '篇',
-  branchesHistory: '条',
-  keepsakes: '件',
-};
 
 export function NgPlusConfirm() {
   const open = useGame((s) => s.ngPlusConfirmOpen);
@@ -155,6 +154,19 @@ export function NgPlusConfirm() {
   const cycle = useGame((s) => s.archive.cycle);
 
   /**
+   * 即将进入的周目序号。
+   *
+   * `cycle` 的口径（**全站统一**）：**当前周目序号**，1 = 一周目。
+   * - `startNextCycle`（本页确认后）→ `cycle += 1` → 进入下一周目。
+   * - `newGame`（「再来一次」/ 主菜单「重新开始」）→ **cycle 不变**：
+   *   重开的是**当前这一周目**，不是「开新周目」。开新周目只有本页一个入口。
+   *
+   * 所以这里的「第 N 周目」= 即将进入的周目序号，与 core 的
+   * `startNextCycle` 写入的值严格一致（图鉴 / 结局页入口 / 本页三处同义）。
+   */
+  const nextCycle = cycle + 1;
+
+  /**
    * 「保留」每一条的计数。
    *
    * `countOf` 指向 core 清单里声明的来源；这里只做取值，不改清单。
@@ -165,6 +177,8 @@ export function NgPlusConfirm() {
     readLogs: readLogs.length,
     branchesHistory: branchesHistory.length,
     keepsakes: keepsakes.length,
+    // `cycle` 显示的是**即将进入的**周目号（当前 + 1）。
+    cycle: nextCycle,
   };
 
   useEffect(() => {
@@ -177,19 +191,6 @@ export function NgPlusConfirm() {
   }, [open, close]);
 
   if (!open) return null;
-
-  /**
-   * 即将进入的周目序号。
-   *
-   * `cycle` 的口径（**全站统一**）：**当前周目序号**，1 = 一周目。
-   * - `startNextCycle`（本页确认后）→ `cycle += 1` → 进入下一周目。
-   * - `newGame`（「再来一次」/ 主菜单「重新开始」）→ **cycle 不变**：
-   *   重开的是**当前这一周目**，不是「开新周目」。开新周目只有本页一个入口。
-   *
-   * 所以这里的「第 N 周目」= 即将进入的周目序号，与 core 的
-   * `startNextCycle` 写入的值严格一致（图鉴 / 结局页入口 / 本页三处同义）。
-   */
-  const nextCycle = cycle + 1;
 
   return (
     <div className="sheet ngplus" onClick={close}>
@@ -211,8 +212,8 @@ export function NgPlusConfirm() {
             <ul className="ngplus__list ngplus__list--keep">
               {NEXT_CYCLE_KEPT.map((b) => (
                 <li key={b.countOf ?? b.text}>
-                  {b.text}
-                  {b.countOf ? `（${counts[b.countOf]} ${COUNT_UNITS[b.countOf]}）` : ''}
+                  {b.countOf ? b.text.replace('【N】', String(counts[b.countOf] ?? 0)) : b.text}
+                  {b.note ? <span className="ngplus__note"> —— {b.note}</span> : null}
                 </li>
               ))}
             </ul>
@@ -222,7 +223,10 @@ export function NgPlusConfirm() {
             <h3 className="ngplus__sectiontitle">重置</h3>
             <ul className="ngplus__list ngplus__list--reset">
               {NEXT_CYCLE_RESET.map((b) => (
-                <li key={b.text}>{b.text}</li>
+                <li key={b.text}>
+                  {b.text}
+                  {b.note ? <span className="ngplus__note"> —— {b.note}</span> : null}
+                </li>
               ))}
             </ul>
           </section>

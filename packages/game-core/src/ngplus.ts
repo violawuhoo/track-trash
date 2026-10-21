@@ -186,73 +186,105 @@ export function recordBranch(np: NgPlusState, branchId: BranchId): NgPlusState {
  * - `countOf`：UI 要显示的计数来源（「N 个」里的 N 从哪来）。
  *   确认页把 `ngPlus` 的三个子集合和 `keepsakes` 拆成四条各带计数，
  *   所以这里给的是**子集合名**而不是顶层字段名。
- * - `text`：给玩家看的一句话。措辞是文案层的活儿，core 只管「不许漏字段」。
+ * - `text`：给玩家看的一句话。措辞是**文策渊定稿**
+ *   （`docs/design/CONTENT-v3-NGPLUS-UI-COPY.md`），
+ *   里面用 `【N】` 占位待插入的计数。core 只管「不许漏字段 + 不许改文案」。
+ * - `note`：「——」之后的**后果说明**，UI 用次要色渲染（定稿 §1.2）。
  */
 export interface NextCycleBullet {
   /** 这一条覆盖的存档字段 */
   fields: readonly (keyof SaveState)[];
   /** UI 计数的来源；不填 = 这条不显示计数 */
-  countOf?: 'endings' | 'readLogs' | 'branchesHistory' | 'keepsakes';
-  /** 给玩家看的一句话 */
+  countOf?: 'endings' | 'readLogs' | 'branchesHistory' | 'keepsakes' | 'cycle';
+  /** 给玩家看的一句话。`【N】` 会被计数替换 */
   text: string;
+  /** 「——」之后的后果说明（可选） */
+  note?: string;
 }
 
 /**
  * 保留清单（`startNextCycle` 原样带着走）。
  *
- * `ngPlus` 里的 `cycle` 是唯一会**变**的（+1），其余三个数组原样保留。
- * 顶部标题已经写明「第 N 周目」，所以 `cycle` 不单列一条。
+ * 文案是**定稿**（2026-10-22 文策渊，`docs/design/CONTENT-v3-NGPLUS-UI-COPY.md` §1）。
+ * 计数不加分隔符（不加「共」字、不加千分位）；N = 0 时整行照常显示。
+ *
+ * | # | 文案 | 插入源 | 字段 |
+ * |---|---|---|---|
+ * | K1 | 已解锁的结局（【N】个）—— 那几格不会灭 | `endings.length` | `ngPlus.endings` |
+ * | K2 | 读过的前任记录（【N】篇）—— 读过的不用再读一遍 | `readLogs.length` | `ngPlus.readLogs` |
+ * | K3 | 走过的支线（【N】条）—— 面板上会标出「上次走过」 | `branchesHistory.length` | `ngPlus.branchesHistory` |
+ * | K4 | 纪念品（【N】件）—— 你拿到的东西不会丢 | `keepsakes.length` | `keepsakes` |
+ * | K5 | 这是你的第 【N】 周目 | `cycle + 1` | `ngPlus.cycle` |
  */
 export const NEXT_CYCLE_KEPT: readonly NextCycleBullet[] = Object.freeze([
   Object.freeze({
     fields: Object.freeze(['ngPlus'] as const),
     countOf: 'endings' as const,
-    text: '已解锁的结局',
+    text: '已解锁的结局（【N】个）',
+    note: '那几格不会灭',
   }),
   Object.freeze({
     fields: Object.freeze(['ngPlus'] as const),
     countOf: 'readLogs' as const,
-    text: '读过的前任记录',
+    text: '读过的前任记录（【N】篇）',
+    note: '读过的不用再读一遍',
   }),
   Object.freeze({
     fields: Object.freeze(['ngPlus'] as const),
     countOf: 'branchesHistory' as const,
-    text: '走过的支线',
+    text: '走过的支线（【N】条）',
+    note: '面板上会标出「上次走过」',
   }),
   Object.freeze({
     fields: Object.freeze(['keepsakes'] as const),
     countOf: 'keepsakes' as const,
-    text: '纪念品',
+    text: '纪念品（【N】件）',
+    note: '你拿到的东西不会丢',
+  }),
+  Object.freeze({
+    fields: Object.freeze(['ngPlus'] as const),
+    countOf: 'cycle' as const,
+    text: '这是你的第 【N】 周目',
   }),
 ]);
 
 /**
  * 重置清单（`startNextCycle` 清零 / 归位）。
  *
+ * 文案是**定稿**（2026-10-22 文策渊，`docs/design/CONTENT-v3-NGPLUS-UI-COPY.md` §2）。
+ *
  * ⚠️ 措辞要能让玩家明白**后果**，不只是列字段名。
- * 例如 `crafts` 那条必须点明「读那几篇记录要重新攒次数」——
+ * 例如 `crafts` 那条必须点明「上周目没读完的那几篇记录，要重新攒次数才能读」——
  * 玩家看到「累计合成次数」不知道这跟读日志有关，看到那句才知道。
+ *
+ * **行数不是硬指标，但每个被重置的字段必须落在某一行的后果描述里。**
+ * R4 / R5 各自的后果不同，**不可合并进别的行、也不可彼此合并**（定稿 §2.2）。
  */
 export const NEXT_CYCLE_RESET: readonly NextCycleBullet[] = Object.freeze([
   Object.freeze({
     fields: Object.freeze(['bag', 'discovered', 'day', 'areaId', 'scene'] as const),
-    text: '背包、地面上捡到过的东西、天数（回到坠毁点的第 1 天）',
+    text: '背包、地面上捡到过的东西、天数',
+    note: '回到坠毁点的第 1 天',
   }),
   Object.freeze({
     fields: Object.freeze(['stage', 'stepIndex', 'buildDone'] as const),
-    text: '阶段进度（回到第一个阶段的第 1 步）',
+    text: '阶段进度',
+    note: '回到第一个阶段的第 1 步，建设期得重新走满',
   }),
   Object.freeze({
     fields: Object.freeze(['branches'] as const),
     text: '已完成的支线',
+    note: '但还是得重新做一遍',
   }),
   Object.freeze({
     fields: Object.freeze(['crafts'] as const),
-    text: '累计合成次数（读那几篇记录要重新攒次数）',
+    text: '累计合成次数',
+    note: '上周目没读完的那几篇记录，要重新攒次数才能读',
   }),
   Object.freeze({
     fields: Object.freeze(['logsFound'] as const),
-    text: '本周目拿到的记录载体（要重新做一遍）',
+    text: '这一周拿到的记录载体',
+    note: '载体是要用掉的，不带过去',
   }),
   Object.freeze({
     fields: Object.freeze(['accidents', 'log'] as const),
@@ -260,7 +292,8 @@ export const NEXT_CYCLE_RESET: readonly NextCycleBullet[] = Object.freeze([
   }),
   Object.freeze({
     fields: Object.freeze(['ending'] as const),
-    text: '本周目的结局（结局本身已经记在「已解锁的结局」里）',
+    text: '本周目的结局',
+    note: '结局本身已经记在「已解锁的结局」里了',
   }),
   Object.freeze({
     fields: Object.freeze(['launchAttempts', 'launchFailures'] as const),

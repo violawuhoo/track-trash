@@ -303,8 +303,26 @@ export function craft(
             text: `支线「${branch.name}」达成。`,
           }),
         };
-        // 奶茶店 / 生日是直接结局；飞船要玩家自己决定何时起飞
-        if (status.id !== 'ship') ending = branch.ending;
+        // 奶茶店 / 生日 / 留下来是直接结局；飞船要玩家自己决定何时起飞。
+        //
+        // ⚠️ 这里必须把 ending 写进 `next.ending`（= SaveState.ending），
+        // 不能只写返回值字段 `ending`：
+        // 结局页（web 的 EndingScreen）读的是 `save.ending`，
+        // 只写返回值会让页面拿到 null 并回退成 free —— 玩家做完「留下来」
+        // 看到的却是「自由模式 / 没有目标了」。这与 finishGame() 的
+        // 「进入结局：${ending}」日志口径保持一致。
+        if (status.id !== 'ship') {
+          ending = branch.ending;
+          next = {
+            ...next,
+            ending: branch.ending,
+            log: appendLog(next.log, {
+              day: next.day,
+              kind: '结局',
+              text: `进入结局：${branch.ending}`,
+            }),
+          };
+        }
       }
     }
   }

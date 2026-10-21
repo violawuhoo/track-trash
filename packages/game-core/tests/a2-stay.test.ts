@@ -17,12 +17,29 @@ import {
   branchStatus,
   createInitialState,
   craft,
+  finishGame,
 } from '../src/index';
 import type { SaveState } from '../src/index';
 
 /** 阶段 3 的存档（stage 3 才能触发支线检查） */
 function stage3State(bag: Record<string, number> = {}): SaveState {
   return { ...createInitialState(), stage: 3, stepIndex: 0, bag: { ...bag } };
+}
+
+/**
+ * 建设期已走满的阶段 3 存档（stepIndex = steps.length、buildDone = true）。
+ *
+ * 走满后 resolve.ts 的阶段目标闸门放行，合成回归纯配方判定 ——
+ * 这样 P0 用例里造的物品一定是配方产物，不会被阶段目标截胡。
+ */
+function stage3DoneState(bag: Record<string, number> = {}): SaveState {
+  return {
+    ...createInitialState(),
+    stage: 3,
+    stepIndex: 3,
+    buildDone: true,
+    bag: { ...bag },
+  };
 }
 
 describe('A2 · 第四支线 stay', () => {
@@ -126,5 +143,130 @@ describe('A2 · 第四支线 stay', () => {
       '石头今天唱得比平时多三遍。多出来的部分，我在你的日志里也记了。',
       '我建议你把这地方记成坐标。以后有人路过，至少知道这儿可以停。',
     ]);
+  });
+});
+
+// ───────────────────── P0：支线完成时 ending 必须落盘 ─────────────────────
+
+/**
+ * 回归：支线完成时 `craft()` 只把 ending 写进**返回值字段**，没写进
+ * `SaveState.ending` → web 端 `fromCore` 拿到 null → 结局页 `save.ending ?? 'free'`
+ * 回退成 free → 玩家做完「留下来」看到的是「自由模式 / 没有目标了」。
+ *
+ * 这里**验 `res.state.ending`**（落盘的那一份），不是 `res.ending`（返回值）。
+ */
+describe('P0 · 支线完成时 ending 落盘', () => {
+  /** 合成到指定的一对材料，返回 craft 结果 */
+  function mix(state: SaveState, a: string, b: string) {
+    const res = craft(state, a, b);
+    expect(res.ok, `${a}+${b}`).toBe(true);
+    if (!res.ok) throw new Error('unreachable');
+    return res;
+  }
+
+  it('stay 支线完成 → res.state.ending === "stay"，且有一条「结局」日志', () => {
+    // 背包里已有 落脚 / 营生 两件，只缺 熟人 —— 再合成一个 neighbor 就齐了
+    const state = stage3DoneState({
+      staykey: 1,
+      toolstand: 1,
+      awkward: 1,
+      mirror: 1,
+    });
+    expect(state.ending).toBeNull();
+
+    const res = mix(state, 'awkward', 'mirror'); // → neighbor
+    expect(res.state.branches.stay).toBe(true);
+    // 落盘的那一份 —— 这是结局页真正读的值
+    expect(res.state.ending).toBe('stay');
+    // 返回值与落盘一致
+    expect(res.ending).toBe(res.state.ending);
+    // 结局日志存在
+    expect(res.state.log.some((l) => l.kind === '结局')).toBe(true);
+    expect(res.state.log.some((l) => l.text === '进入结局：stay')).toBe(true);
+  });
+
+  it('teashop 支线完成 → res.state.ending === "teashop"', () => {
+    // 奶茶店三槽位：shopfront / menu / fakecustomer
+    const state = stage3DoneState({
+      shopfront: 1,
+      menu: 1,
+      awkward: 1,
+      sock: 1,
+    });
+    const res = mix(state, 'awkward', 'sock'); // → fakecustomer
+    expect(res.state.branches.teashop).toBe(true);
+    expect(res.state.ending).toBe('teashop');
+    expect(res.ending).toBe('teashop');
+    expect(res.state.log.some((l) => l.text === '进入结局：teashop')).toBe(true);
+  });
+
+  it('birthday 支线完成 → res.state.ending === "birthday"', () => {
+    // 生日三槽位：birthproof / cakerepl / clapper
+    const state = stage3DoneState({
+      birthproof: 1,
+      cakerepl: 1,
+      mood: 1,
+      tape: 1,
+    });
+    const res = mix(state, 'mood', 'tape'); // → clapper
+    expect(res.state.branches.birthday).toBe(true);
+    expect(res.state.ending).toBe('birthday');
+    expect(res.ending).toBe('birthday');
+    expect(res.state.log.some((l) => l.text === '进入结局：birthday')).toBe(true);
+  });
+
+  it('ship 支线完成不自动进结局（玩家自己决定何时起飞）', () => {
+    // 飞船三件套：optimistic / doorthing / ration
+    const state = stage3DoneState({
+      optimistic: 1,
+      doorthing: 1,
+      ration: 1,
+      mood: 1,
+      poker: 1,
+    });
+    const res = mix(state, 'mood', 'poker'); // 无关的一次合成，只为触发支线检查
+    expect(res.state.branches.ship).toBe(true);
+    // ship 不写 ending
+    expect(res.state.ending).toBeNull();
+    expect(res.ending).toBeUndefined();
+  });
+
+  it('幂等：支线已完成后再合成不会重复触发结局', () => {
+    const state = stage3DoneState({
+      staykey: 1,
+      toolstand: 1,
+      awkward: 1,
+      mirror: 1,
+      mood: 1,
+      tape: 1,
+    });
+    const first = mix(state, 'awkward', 'mirror'); // → neighbor，触发 stay
+    expect(first.state.ending).toBe('stay');
+
+    // 再合成一次无关的东西：stay 已 true，不应重复写结局日志
+    const before = first.state.log.filter((l) => l.text === '进入结局：stay').length;
+    const second = mix(first.state, 'mood', 'tape');
+    expect(second.state.ending).toBe('stay');
+    expect(
+      second.state.log.filter((l) => l.text === '进入结局：stay').length,
+    ).toBe(before);
+  });
+
+  it('craft 落盘的结局日志与 finishGame 的口径一致', () => {
+    // finishGame 是 web 端 chooseEnding 走的正规路径
+    const viaCraft = mix(
+      stage3DoneState({ staykey: 1, toolstand: 1, awkward: 1, mirror: 1 }),
+      'awkward',
+      'mirror',
+    ).state.log.find((l) => l.text === '进入结局：stay')!;
+
+    const viaFinish = finishGame(
+      { ...createInitialState(), stage: 3 },
+      'stay',
+    ).log.find((l) => l.text === '进入结局：stay')!;
+
+    expect(viaCraft.kind).toBe('结局');
+    expect(viaCraft.kind).toBe(viaFinish.kind);
+    expect(viaCraft.text).toBe(viaFinish.text);
   });
 });

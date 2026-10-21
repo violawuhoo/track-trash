@@ -72,13 +72,20 @@ export function HintBar() {
    * 此时 missingForBag 返回空、当前步骤不存在，headline 走「建设期完成」分支。
    */
   const stage3StepTotal = stageDef?.steps.length ?? 0;
+  // 完成判据取或：buildDone 是 core 写的权威位；但老档 / 异常路径下
+  // buildDone 可能没落盘而 stepIndex 已经走到 steps.length（= 三步走满）。
+  // 两种情况都算完成，否则 headline 会永远卡在「第 4 步 / 共 3 步」——
+  // 而且这种形态下再合成也不会修复 buildDone（core 只在阶段命中的分支写它）。
+  const stage3Done = buildDone || stepIndex >= stage3StepTotal;
+  // 步号 clamp：stepIndex 走到 steps.length 之后不能显示「第 4 步」。
+  const shownStep = Math.min(stepIndex + 1, stage3StepTotal);
   const headline =
     stage === 3
-      ? buildDone
+      ? stage3Done
         ? '建设期完成 · 三样都造出来了'
         : missing.length > 0
-          ? `第 ${stepIndex + 1} 步 / 共 ${stage3StepTotal} 步 · 缺：${missing.join(' / ')}`
-          : `第 ${stepIndex + 1} 步 / 共 ${stage3StepTotal} 步`
+          ? `第 ${shownStep} 步 / 共 ${stage3StepTotal} 步 · 缺：${missing.join(' / ')}`
+          : `第 ${shownStep} 步 / 共 ${stage3StepTotal} 步`
       : missing.length > 0
         ? `缺：${missing.join(' / ')}`
         : '齐了，放进合成台试试';

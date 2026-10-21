@@ -6,7 +6,41 @@ export function EndingScreen() {
   const resetAll = useGame((s) => s.resetAll);
   const backToStart = useGame((s) => s.backToStart);
 
-  const ending: EndingId = save.ending ?? 'free';
+  // ⚠️ 不要用 `save.ending ?? 'free'` 兜底。
+  // 「ending 缺失」和「玩家主动选了自由模式」是两件事 —— 兜底成 free 会让
+  // 状态机缺陷（支线完成时 ending 没落盘）伪装成正常结局，玩家看到的是
+  // 完全错误的结局页。缺失时显式报错，比静默显示错结局好。
+  const ending: EndingId | null = save.ending;
+
+  if (!ending) {
+    return (
+      <div className="ending">
+        <div className="ending__stamp">此处盖章</div>
+        <h1 className="ending__title">结局数据缺失</h1>
+        <p className="ending__sub">
+          这一局没有记录结局。存档可能来自旧版本，或结算流程被打断过。
+        </p>
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 10,
+            maxWidth: 320,
+            margin: '0 auto',
+            width: '100%',
+          }}
+        >
+          <button className="btn btn--primary btn--block" onClick={resetAll}>
+            重开一局
+          </button>
+          <button className="btn btn--block" onClick={backToStart}>
+            回到开始页
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   const meta = ENDINGS[ending];
   const paragraphs = ENDING_LINES[ending];
 

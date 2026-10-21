@@ -40,6 +40,24 @@ export const SaveStateSchema = z
     // 可选：老存档没有这两个键，别让老档传不上去。
     crafts: z.number().optional(),
     logsFound: z.array(z.string()).optional(),
+    // C2 批次：二周目档案容器（cycle / endings / readLogs / branchesHistory）。
+    //
+    // 两种形态都要放行：
+    // - 对象形态：C2 之后的存档
+    // - 布尔形态：A2 落的语义位（老存档）
+    //
+    // 归一化在 web 端做（`normalizeNgPlus`），服务端只做形状校验，别把两种形态拒掉。
+    ngPlus: z
+      .union([
+        z.object({
+          cycle: z.number().optional(),
+          endings: z.array(z.string()).optional(),
+          readLogs: z.array(z.string()).optional(),
+          branchesHistory: z.array(z.string()).optional(),
+        }),
+        z.boolean(),
+      ])
+      .optional(),
   })
   .passthrough();
 

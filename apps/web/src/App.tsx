@@ -3,6 +3,8 @@ import { StartScreen } from './screens/StartScreen';
 import { GameScreen } from './screens/GameScreen';
 import { EndingScreen } from './screens/EndingScreen';
 import { ItemSheet, Toast } from './components/Toast';
+import { CodexPanel } from './components/CodexPanel';
+import { NgPlusConfirm } from './components/NgPlusConfirm';
 
 export default function App() {
   const screen = useGame((s) => s.screen);
@@ -21,6 +23,9 @@ export default function App() {
       </div>
       <Toast toast={toast} onDismiss={dismissToast} />
       <ItemSheet id={viewing} onClose={() => view(null)} />
+      {/* C2 批次：图鉴（主菜单 / 结局页入口）与二周目确认页（结局页入口）。 */}
+      <CodexPanel />
+      <NgPlusConfirm />
       <div className="grain" aria-hidden="true" />
     </>
   );

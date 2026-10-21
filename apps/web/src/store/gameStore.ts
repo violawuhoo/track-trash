@@ -31,17 +31,23 @@ import {
   allBranchStatus,
   appendLog,
   attemptLaunch,
+  continueAfterEnding as coreContinueAfterEnding,
   craft,
   createInitialState,
+  createNgPlus,
   distribute,
   finishGame,
   getItem,
   hintMessage,
   launchCheck,
   lines,
+  normalizeNgPlus,
+  recordReadLog,
   sectorCenter,
+  startNextCycle as coreStartNextCycle,
   type AreaId,
   type EndingId,
+  type NgPlusState,
   type PlacedItem,
   type SaveState,
   type Vec2,
@@ -234,10 +240,13 @@ function readSavedGame(): SaveStateV2 | null {
       // 归一化：老存档（A1a 之前写入的）没有 buildDone 字段 → 一律 false。
       // 不 bump schemaVersion，走 T7 `tutorial` 的同款先例（入存档但不迁移）。
       buildDone: parsed.buildDone === true,
-      // 归一化：老存档没有 ngPlus 字段 → 一律 false。
-      // GDD §7.3 把 ngPlus 定义为对象容器（cycle/endings/readLogs/branchesHistory），
-      // 本批只落布尔语义位；扩成对象容器是 C2 批次的事（见 game-core types.ts 注释）。
-      ngPlus: parsed.ngPlus === true,
+      // 归一化：老存档的 ngPlus 有三种形态（A2 的布尔语义位 / 缺字段 / C2 的对象容器）。
+      // **不能因为读到 boolean 就崩** —— 交给 core 的 `normalizeNgPlus` 统一处理：
+      //   undefined/null → 一周目空档案
+      //   true          → cycle: 2 的空档案（A2 语义位「二周目已解锁」）
+      //   false         → 一周目空档案
+      //   对象          → 逐键防御性归一化（cycle / endings / readLogs / branchesHistory）
+      ngPlus: normalizeNgPlus(parsed.ngPlus),
       // 归一化：老存档的 branches 缺 stay 键 → 一律 false。
       // 不做的话 `branches.stay` 读到 undefined，UI 与 availableEndings 的形状会不一致。
       branches: readBranches(parsed.branches),
@@ -309,6 +318,46 @@ interface GameStore {
   save: SaveStateV2;
   screen: Screen;
 
+  /**
+   * 跨周目档案的**只读镜像**（C2 批次 · 图鉴面板用）。
+   *
+   * 为什么不让图鉴直接读 `save.ngPlus`：
+   * 主菜单（screen === 'start'）时 `save` 是 `createInitialState()` 的空档案 ——
+   * 玩家还没点「继续游戏」，存档躺在 localStorage 里没进 store。
+   * 那样从主菜单打开图鉴会看到一片空白（结局 0/5、日志 0/8），
+   * 而玩家明明已经通关过。`archive` 在 store 初始化时从 localStorage 读一次，
+   * 之后每次 `commit` 同步，保证图鉴在任何页面都反映真实档案。
+   */
+  archive: NgPlusState;
+
+  /**
+   * 跨周目**纪念品**的只读镜像（C2 批次）。
+   *
+   * 为什么单独一个字段而不是塞进 `archive`（`NgPlusState`）：
+   * `NgPlusState` 是 **core 存档契约**里的类型（`SaveState.ngPlus`），
+   * 纪念品不在其中 —— 它是 `SaveState.keepsakes`（本周目存档字段）。
+   * 但 GDD §7.5 的口径是「纪念品**保留全部**」，所以它跟 `ngPlus` 一样
+   * 属于**跨周目**的东西，主菜单重开时也必须留住。
+   *
+   * 与 `archive` 同生命周期：`commit` 同步、`resetAll` 清空、
+   * `newGame` 读取。
+   */
+  archiveKeepsakes: string[];
+
+  /**
+   * 「已获得载体」的只读镜像（C2 批次 · 图鉴三态用）。
+   *
+   * `SaveState.logsFound` 是**单周目**字段（「本周目合出过哪些载体」），
+   * 二周目开新周目时清零。它跟 `ngPlus.readLogs`（跨周目「读过」）是**两个概念** ——
+   * 图鉴必须分开显示：「已读」（readLogs）与「本周目已获得」（logsFound）。
+   *
+   * 为什么也要一个镜像：主菜单时 `save` 是空档案，
+   * 直接读 `save.logsFound` 会让图鉴把「拿到载体但还没读」的篇目
+   * 误判成「完全没碰到」。镜像在 `commit` 时同步，
+   * 所以主菜单看到的是上一次存档的载体获得情况。
+   */
+  archiveLogsFound: string[];
+
   // ── UI 状态（不持久化）──
   slots: [string | null, string | null];
   toast: ToastData | null;
@@ -319,6 +368,10 @@ interface GameStore {
   bagOpen: boolean;
   /** 前任日志面板的展开态（C1 批次） */
   logOpen: boolean;
+  /** 图鉴面板的展开态（C2 批次）。主菜单与结局页各一个入口 */
+  codexOpen: boolean;
+  /** 二周目确认页的展开态（C2 批次）。结局页「开始二周目」→ 确认页 → 真正开新周目 */
+  ngPlusConfirmOpen: boolean;
   /**
    * T7 一次性事件台词的防重旗（不入存档）。
    * 引导期内「首次合错 / 首次被雾障弹回」各只说一次；刷新后可能重来一次，可接受。
@@ -368,6 +421,31 @@ interface GameStore {
   /** C1 批次：前任日志面板开关 */
   toggleLog: () => void;
   closeLog: () => void;
+  /** C2 批次：图鉴面板开关（主菜单 / 结局页入口） */
+  toggleCodex: () => void;
+  closeCodex: () => void;
+  /** C2 批次：二周目确认页开关 */
+  openNgPlusConfirm: () => void;
+  closeNgPlusConfirm: () => void;
+  /**
+   * C2 批次：开始二周目（真正开新周目）。
+   *
+   * 保留 `keepsakes` / `ngPlus.endings` / `ngPlus.readLogs` / `ngPlus.branchesHistory`，
+   * `ngPlus.cycle += 1`，其余世界进度清零（GDD §7.1）。
+   */
+  startNewCycle: () => void;
+  /**
+   * C2 批次：「留在这里继续」—— 结局后不重开，回自由模式。
+   *
+   * ⚠️ **不能用 `resetAll`**（会清掉 `ngPlus` 档案与 `keepsakes`）。
+   */
+  continueAfterEnding: () => void;
+  /**
+   * C2 批次：标记一篇日志「已读」。
+   *
+   * 写进 `ngPlus.readLogs`（跨周目保留）→ 二周目里这篇不再需要重新解锁（G1）。
+   */
+  readLog: (logId: string) => void;
 
   backToStart: () => void;
   resetAll: () => void;
@@ -381,16 +459,36 @@ function spawnPoint(): Vec2 {
 }
 
 export const useGame = create<GameStore>((set, get) => {
+  /**
+   * 启动时读一次 localStorage 存档。
+   *
+   * 读两次会拿到两个不同的对象引用，所以这里读一次、复用。
+   * 用途：`archive` / `archiveKeepsakes` 的初值 —— 主菜单（还没点「继续游戏」）
+   * 时 `save` 还是空档案，但跨周目档案必须是真的。
+   */
+  const boot = readSavedGame();
+
   /** 统一的写入 + 持久化。`world` 镜像跟着一起更新 */
   const commit = (save: SaveStateV2, extra: Partial<GameStore> = {}) => {
     persist(save);
     // 后台防抖推云端；失败静默（离线优先，不打断游玩）
     queuePush(save);
-    set({ save, world: save.world, ...extra });
+    set({
+      save,
+      world: save.world,
+      archive: save.ngPlus,
+      archiveKeepsakes: save.keepsakes,
+      archiveLogsFound: save.logsFound,
+      ...extra,
+    });
   };
 
   return {
     save: fromCore(createInitialState(), [], TUTORIAL_SKIP),
+    // 档案镜像：初始化时从 localStorage 读一次（主菜单打开图鉴要看到真实进度）
+    archive: boot?.ngPlus ?? createNgPlus(),
+    archiveKeepsakes: boot?.keepsakes ?? [],
+    archiveLogsFound: boot?.logsFound ?? [],
     screen: 'start',
     slots: [null, null],
     toast: null,
@@ -399,6 +497,8 @@ export const useGame = create<GameStore>((set, get) => {
     viewing: null,
     bagOpen: false,
     logOpen: false,
+    codexOpen: false,
+    ngPlusConfirmOpen: false,
     tutorFlags: { wrong: false, blocked: false },
 
     player: spawnPoint(),
@@ -411,24 +511,56 @@ export const useGame = create<GameStore>((set, get) => {
     newGame: () => {
       const spawn = spawnPoint();
       const base = createInitialState();
+      // C2 批次：`ngPlus` 是**跨周目档案**，主菜单「重新开始」不清它
+      // （图鉴 / 已读日志 / 走过的支线 / 周目数都是「这辈子」的东西）。
+      // `resetAll` 才是真正的清档（它会把 ngPlus 一起清掉）。
+      //
+      // ⚠️ 必须读 `get().archive`，**不能读 `get().save.ngPlus`**：
+      // 主菜单（screen === 'start'）时 `save` 还是 `createInitialState()` 的空档案
+      // —— 玩家还没点「继续游戏」，存档躺在 localStorage 里没进 store。
+      // 读 `save.ngPlus` 会拿到空档案，把真实的档案整个覆盖掉
+      // （图鉴全空 / 二周目入口消失 / 已读日志清零）。
+      // `archive` 才是「跨周目档案的正确来源」：store 初始化时从 localStorage 读一次，
+      // 每次 `commit` 同步。
+      base.ngPlus = get().archive;
+      // 纪念品默认**不清空**（GDD §7.5）：「提供清空纪念品开关（默认关闭）——
+      // 不作为默认行为，因为默认清空就是伤害收集欲的那一方」。
+      // 彻底清档走 `resetAll`。
+      //
+      // 同理读 `archiveKeepsakes` 而不是 `save.keepsakes`（主菜单时后者是空的）。
+      base.keepsakes = get().archiveKeepsakes;
       const world = redistribute(fromCore(base, [], TUTORIAL_SKIP), spawn, DEFAULT_MAX_DIST);
       const save: SaveStateV2 = fromCore(base, world, { step: 'newcomer', picks: 0 });
       persist(save);
       // 开始页「重新开始」同时丢弃云端旧档。否则按「高分不败」的冲突规则，
       // 新档永远赢不过云端旧档，下次启动会被原样覆盖回来 —— 等于新游戏开不起来。
+      //
+      // ⚠️ 顺序：先等 DELETE 落地，再入队 PUT。
+      // 原来 `void clearCloudSave(); queuePush(save);` 是并发的 ——
+      // 理论上可能出现「PUT 先到、DELETE 后到」→ 云端档被删掉。
+      // 现在把入队挂到 DELETE 的 finally 上，顺序确定。
       cancelPendingPush();
-      void clearCloudSave();
-      queuePush(save);
+      void clearCloudSave().finally(() => queuePush(save));
       set({
         save,
         world,
         screen: 'game',
         slots: [null, null],
-        dialog: lines('start'),
+        // 档案镜像：值与 `base.ngPlus` / `base.keepsakes` 同源（就是从 `archive` /
+        // `archiveKeepsakes` 读出来再放回去的），这里显式写一遍是为了让
+        // 「哪些路径更新 archive」这条规则在代码里一眼可见 ——
+        // `newGame` 走的是 `set`（不是 `commit`），所以不会自动同步。
+        archive: base.ngPlus,
+        archiveKeepsakes: base.keepsakes,
+        archiveLogsFound: base.logsFound,
+        // 二周目玩家重开 → 播二周目开场（GDD §7.2「回到第 1 天」）。
+        dialog: save.ngPlus.cycle >= 2 ? lines('ngplus') : lines('start'),
         dialogIndex: 0,
         viewing: null,
         bagOpen: false,
         logOpen: false,
+        codexOpen: false,
+        ngPlusConfirmOpen: false,
         tutorFlags: { wrong: false, blocked: false },
         player: spawn,
         spawn,
@@ -445,6 +577,11 @@ export const useGame = create<GameStore>((set, get) => {
       set({
         save,
         world: save.world,
+        // 读档后把跨周目档案镜像同步成本档的值
+        // （boot 时读的是同一个存档，但云端同步后 localStorage 可能已是别的值）。
+        archive: save.ngPlus,
+        archiveKeepsakes: save.keepsakes,
+        archiveLogsFound: save.logsFound,
         screen: 'game',
         slots: [null, null],
         dialog:
@@ -503,6 +640,13 @@ export const useGame = create<GameStore>((set, get) => {
       const item = getItem(placed.id);
       const nextWorld = world.filter((it) => it.uid !== uid);
 
+      // G4「石头记得你」（C2 批次）：二周目第 1 天第一次捡到会唱歌的石头时，
+      // 拾取文案多一句。纯文案，不改数值、不改判定、不改 `items.ts` 的 desc。
+      const ngPlusFlavor =
+        placed.id === 'rock' && firstTime && save.ngPlus.cycle >= 2 && save.day === 1
+          ? '它今天唱得比上次少一遍，不知道为什么。'
+          : '';
+
       // T7：引导期内第一次捡（此时 step 还是 newcomer / firstMove）→ 播一次性台词
       const isFirstPickup =
         save.tutorial.step === 'newcomer' || save.tutorial.step === 'firstMove';
@@ -517,7 +661,7 @@ export const useGame = create<GameStore>((set, get) => {
           day: save.day,
           kind: '拾取',
           text: firstTime
-            ? `第一次捡到「${item.name}」。${item.desc}`
+            ? `第一次捡到「${item.name}」。${item.desc}${ngPlusFlavor}`
             : `又捡到一个「${item.name}」。`,
         }),
         world: nextWorld,
@@ -749,6 +893,111 @@ export const useGame = create<GameStore>((set, get) => {
 
     closeLog: () => set({ logOpen: false }),
 
+    // ── C2 批次：图鉴 / 二周目 ──
+
+    /** 图鉴面板开关。背包 / 日志 / 图鉴三者互斥（一次只开一个） */
+    toggleCodex: () => {
+      const next = !get().codexOpen;
+      set({
+        codexOpen: next,
+        ...(next ? { bagOpen: false, logOpen: false } : {}),
+      });
+    },
+
+    closeCodex: () => set({ codexOpen: false }),
+
+    openNgPlusConfirm: () => set({ ngPlusConfirmOpen: true, codexOpen: false }),
+
+    closeNgPlusConfirm: () => set({ ngPlusConfirmOpen: false }),
+
+    /**
+     * 开始二周目。**确认页点「开始」后才走这里**。
+     *
+     * 流程（GDD §7.2）：
+     * 1. `core.startNextCycle` → `ngPlus.cycle += 1`，保留 keepsakes / endings /
+     *    readLogs / branchesHistory，世界进度清零。
+     * 2. 重新分布地面（世界是新的）。
+     * 3. 回到第 1 天，播 `DIALOGUE.ngplus`（3 句定稿）。
+     */
+    startNewCycle: () => {
+      const { save, player, viewportHalf, zoom } = get();
+      const nextCore = coreStartNextCycle(toCore(save));
+      let next = fromCore(nextCore, save.world, save.tutorial);
+      const world = redistribute(next, player, viewportHalf / zoom);
+      next = { ...next, world };
+      commit(next, {
+        screen: 'game',
+        slots: [null, null],
+        dialog: lines('ngplus'),
+        dialogIndex: 0,
+        viewing: null,
+        bagOpen: false,
+        logOpen: false,
+        codexOpen: false,
+        ngPlusConfirmOpen: false,
+      });
+      // 「开新周目」也是一次**世界归零**，所以同样要处理云端旧档。
+      //
+      // 正常情况下 `cycle` 参与评分已经够用（cycle += 1 → 分数 +1e6，
+      // 必然赢过云端的上一周目档）。但有一个同周目的边角：云端存着
+      // 「同一周目、更靠后」的档（score 更大）时，本地刚归零的新周目会输 ——
+      // 玩家会发现「我点了开始二周目，回来还是老存档」。
+      // 所以这里跟 `newGame` 一样先清云端再推。代价：云端那份旧档被覆盖，
+      // 但它携带的档案（endings / readLogs / branchesHistory）本来就在本地
+      // `ngPlus` 里，会跟着新档一起推上去，不丢。
+      cancelPendingPush();
+      void clearCloudSave().finally(() => queuePush(next));
+    },
+
+    /**
+     * 「留在这里继续」—— 结局后不清档，回自由模式继续玩。
+     *
+     * ⚠️ **不能用 `resetAll`**：`resetAll` 会 `localStorage.removeItem` +
+     * `clearCloudSave` + 重建初始 state，把 `ngPlus` 档案和 `keepsakes` 一起清掉。
+     * 这里只清 `ending`（core 的 `continueAfterEnding`），其余全留。
+     */
+    continueAfterEnding: () => {
+      const { save } = get();
+      const next = fromCore(coreContinueAfterEnding(toCore(save)), save.world, save.tutorial);
+      commit(next, {
+        screen: 'game',
+        slots: [null, null],
+        viewing: null,
+        bagOpen: false,
+        logOpen: false,
+        codexOpen: false,
+        ngPlusConfirmOpen: false,
+        dialog: [],
+        dialogIndex: 0,
+      });
+    },
+
+    /**
+     * 标记一篇日志「已读」。写进 `ngPlus.readLogs`（跨周目保留）。
+     *
+     * ## 语义（团队已裁决）
+     *
+     * `readLogs` = **玩家点开日志正文**时记录，**不是**合出载体时记录。
+     * 「拿到载体」与「读过」是两件事：载体拿到 ≠ 玩家读了。
+     * （core 的 `craft()` 只写 `logsFound` —— 本周目载体记账。）
+     *
+     * ## 幂等 + 不做无谓写入
+     *
+     * 已读过的篇目再点一次 → 直接 return，**不 commit**。
+     * `commit` 会触发 `persist` + `queuePush`（一次云端推送），
+     * 二周目里已读篇目默认展开、玩家随手点一下就推一次云端，纯浪费。
+     */
+    readLog: (logId) => {
+      const { save } = get();
+      // 已读 → 不重复记账，也不触发持久化 / 云端推送
+      if (save.ngPlus.readLogs.includes(logId)) return;
+      const next = {
+        ...save,
+        ngPlus: recordReadLog(save.ngPlus, logId),
+      };
+      commit(next);
+    },
+
     backToStart: () => set({ screen: 'start', dialog: [], dialogIndex: 0 }),
 
     syncFromCloud: () => {
@@ -768,7 +1017,13 @@ export const useGame = create<GameStore>((set, get) => {
             persist(remote);
             const normalized = readSavedGame();
             if (normalized) {
-              set({ save: normalized, world: normalized.world });
+              set({
+                save: normalized,
+                world: normalized.world,
+                archive: normalized.ngPlus,
+                archiveKeepsakes: normalized.keepsakes,
+                archiveLogsFound: normalized.logsFound,
+              });
               get().showToast('已从云端同步');
             }
             return;
@@ -780,7 +1035,13 @@ export const useGame = create<GameStore>((set, get) => {
             persist(remote);
             const normalized = readSavedGame();
             if (normalized) {
-              set({ save: normalized, world: normalized.world });
+              set({
+                save: normalized,
+                world: normalized.world,
+                archive: normalized.ngPlus,
+                archiveKeepsakes: normalized.keepsakes,
+                archiveLogsFound: normalized.logsFound,
+              });
               get().showToast('已从云端同步');
             }
           } else if (localScore > remoteScore) {
@@ -804,6 +1065,11 @@ export const useGame = create<GameStore>((set, get) => {
       const spawn = spawnPoint();
       set({
         save: fromCore(createInitialState(), [], TUTORIAL_SKIP),
+        // `resetAll` 是**彻底清档**：连跨周目档案（`ngPlus`）一起清。
+        // 「再来一次」（结局页）走的是 `newGame`，不清档案。
+        archive: createNgPlus(),
+        archiveKeepsakes: [],
+        archiveLogsFound: [],
         world: [],
         screen: 'start',
         slots: [null, null],

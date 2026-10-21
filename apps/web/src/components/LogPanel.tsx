@@ -23,8 +23,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   LOGS,
-  carrierFound,
-  logUnlocked,
+  readableLogs,
+  waitingLogs,
   type LogDoc,
   type LogProgress,
 } from '@haola/game-core';
@@ -54,6 +54,8 @@ function renderParagraph(text: string) {
 export function LogPanel() {
   const logOpen = useGame((s) => s.logOpen);
   const closeLog = useGame((s) => s.closeLog);
+  /** C2 批次：展开正文 = 标记「已读」→ 写进 `ngPlus.readLogs`（跨周目保留，G1） */
+  const readLog = useGame((s) => s.readLog);
 
   // 细粒度订阅：只订阅面板真正用到的字段。
   // `s.save` 整体引用每次 collect 都会变，订阅它等于每次拾取都重渲染整份正文。
@@ -62,9 +64,25 @@ export function LogPanel() {
   const stage = useGame((s) => s.save.stage);
   const buildDone = useGame((s) => s.save.buildDone);
   const logsFound = useGame((s) => s.save.logsFound);
+  // 跨周目已读（C2 批次 · G1「你记得」）。数组引用只在开新周目时变。
+  const readLogs = useGame((s) => s.save.ngPlus.readLogs);
 
-  /** 展开中的日志 id。null = 都没展开 */
-  const [openId, setOpenId] = useState<string | null>(null);
+  /**
+   * 展开中的日志 id 集合。
+   *
+   * ⚠️ C2 批次从单个 id 改成**集合**：GDD §7.1 G1「你记得」要求
+   * 「日志面板默认已展开已读篇目」——是复数（一周目读过 L1、L2 就展开两篇）。
+   */
+  const [openIds, setOpenIds] = useState<ReadonlySet<string>>(new Set());
+
+  const toggleOpen = (id: string) => {
+    setOpenIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
 
   /** 面板打开时锁定背景滚动 */
   useEffect(() => {
@@ -78,25 +96,39 @@ export function LogPanel() {
 
   // 换档/重开时收起展开态，避免上一局的展开项留在新一局的面板上
   useEffect(() => {
-    if (!logOpen) setOpenId(null);
+    if (!logOpen) setOpenIds(new Set());
   }, [logOpen]);
 
+  // G1「你记得」：二周目打开日志面板时，**已读篇目默认展开**。
+  // 只在「面板刚打开」这一帧做一次（readLogs 变化时不重置玩家的展开操作）。
+  const [seeded, setSeeded] = useState(false);
+  useEffect(() => {
+    if (!logOpen || seeded) return;
+    setSeeded(true);
+    if (readLogs.length > 0) setOpenIds(new Set(readLogs));
+  }, [logOpen, seeded, readLogs]);
+
   const progress: LogProgress = useMemo(
-    () => ({ day, crafts, stage, buildDone, logsFound }),
-    [day, crafts, stage, buildDone, logsFound],
+    () => ({ day, crafts, stage, buildDone, logsFound, readLogs }),
+    [day, crafts, stage, buildDone, logsFound, readLogs],
   );
 
   const entries: Entry[] = useMemo(() => {
     // 三态判定直接用 core 的纯函数，面板不自己复刻一遍口径 ——
     // 否则 core 改了条件面板不改，就会出现「core 说能读、面板说读不了」。
+    //
+    // ⚠️ C2 批次：状态判定改成**读 core 的三个集合**（readable / waiting / pending），
+    // 而不是本地再算一遍 logUnlocked + carrierFound ——
+    // 因为 core 现在多了一个来源：`alreadyRead`（跨周目已读）。
+    // 本地复刻会把「上周目读过的篇目」误判成 locked。
+    const readable = new Set(readableLogs(progress).map((l) => l.id));
+    const waiting = new Set(waitingLogs(progress).map((l) => l.id));
     return LOGS.map((log) => {
-      const unlocked = logUnlocked(log, progress);
-      const found = carrierFound(log, progress);
-      const state: LogState = unlocked
-        ? found
-          ? 'readable'
-          : 'waiting'
-        : 'locked';
+      const state: LogState = readable.has(log.id)
+        ? 'readable'
+        : waiting.has(log.id)
+          ? 'waiting'
+          : 'locked';
       return { log, state };
     });
   }, [progress]);
@@ -131,7 +163,7 @@ export function LogPanel() {
 
         <div className="logpanel__body">
           {entries.map(({ log, state }) => {
-            const open = openId === log.id;
+            const open = openIds.has(log.id);
             return (
               <article
                 key={log.id}
@@ -149,9 +181,10 @@ export function LogPanel() {
                     <button
                       type="button"
                       className="logentry__head"
-                      onClick={() =>
-                        setOpenId(open ? null : log.id)
-                      }
+                      onClick={() => {
+                        if (!open) readLog(log.id);
+                        toggleOpen(log.id);
+                      }}
                       aria-expanded={open}
                       disabled={state !== 'readable'}
                     >

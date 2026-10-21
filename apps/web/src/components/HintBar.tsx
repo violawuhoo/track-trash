@@ -12,6 +12,7 @@ import {
   getStage,
   missingAreaHints,
   missingForBag,
+  pairingExample,
   type Progress,
 } from '@haola/game-core';
 import { useGame } from '../store/gameStore';
@@ -31,6 +32,8 @@ export function HintBar() {
   const tutorialStep = useGame((s) => s.save.tutorial.step);
   // 建设期是否已走满（boolean，Object.is 去重，不订阅对象引用）
   const buildDone = useGame((s) => s.save.buildDone);
+  // 周目数（G2「你有点手艺」只在二周目生效）。number，Object.is 去重。
+  const cycle = useGame((s) => s.save.ngPlus.cycle);
   const [open, setOpen] = useState(false);
 
   // 由签名重建「仅成员关系」的 bag：bagHasTag / missingForBag 只看 count>0、不关心具体数量
@@ -122,6 +125,14 @@ export function HintBar() {
                   </span>
                 ))}
               </div>
+              {/* G2「你有点手艺」（C2 批次）：二周目里阶段 1 的目标提示额外给一行
+                  可行配对示例。只改文案、不改判定 —— 示例本身是 core 算出来的，
+                  照着做一定能过这一步。 */}
+              {cycle >= 2 && pairingExample(stage, stepIndex) && (
+                <div className="hint__example">
+                  {pairingExample(stage, stepIndex)!.text}
+                </div>
+              )}
               {/* 跨区域提示：缺的东西在哪个区域、具体是哪一件。
                   v2 没有「搜索」按钮，地面物品固定铺着，走过去自动拾取 ——
                   所以这里不替玩家做选择，只指路。 */}

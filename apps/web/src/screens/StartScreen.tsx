@@ -49,6 +49,7 @@ function warmPixi(): void {
 export function StartScreen() {
   const newGame = useGame((s) => s.newGame);
   const continueGame = useGame((s) => s.continueGame);
+  const toggleCodex = useGame((s) => s.toggleCodex);
   // 订阅到 store 上，云档拉回本地（T8）后能立刻出现「继续游戏」。
   // 直接调 hasSavedGame() 只在渲染时读一次 localStorage，拉取完成不会重渲染。
   const saved = useGame(() => hasSavedGame());
@@ -90,6 +91,10 @@ export function StartScreen() {
             继续游戏
           </button>
         )}
+        {/* C2 批次：图鉴入口（GDD §7.2「主菜单与结局页各一个」）。 */}
+        <button className="btn btn--block" onClick={toggleCodex}>
+          图鉴
+        </button>
       </div>
       <div className="start__hint">合成一次算一天。不会死，只会变老。</div>
     </div>

@@ -8,6 +8,7 @@
  * - 推送防抖，避免每次持久化都打接口
  * - 冲突裁决在服务端（progressScore 大者胜），这里只负责「拉取 + 合并」的本地判断
  */
+import { cycleOfNgPlus, progressScoreOf as coreProgressScoreOf } from '@haola/game-core';
 import type { SaveStateV2 } from '../store/gameStore';
 
 const DEVICE_KEY = 'haola.device';
@@ -36,20 +37,29 @@ interface CloudSave {
 
 /** 进度评分（与 SPEC §8.1、服务端一致）。用于启动时本地/云端取高者。
  *
- *  A2：branches 类型加了 stay（第四支线）。**计分口径本批不改** ——
- *  支线计分改造不在 A2 范围，GDD 建议 stay 权重与 teashop/birthday 相同，
- *  留到支线计分那一批统一做，避免本批改动云端分数的历史可比性。 */
+ *  ⚠️ C2 批次：**公式已下沉到 `packages/game-core/src/progress.ts`**。
+ *  之前这里是 `apps/api/src/lib/progress.ts` 的手抄副本（R8 跨端漂移隐患），
+ *  C2 要改公式（加周目数 + `stay` 支线计分），两份手抄改一遍必漏一边。
+ *  现在两端 import 同一个纯函数 —— 同一组输入必然同一个数。
+ *
+ *  周目数（`cycle`）参与评分是**功能性必需**，不是可选优化：
+ *  一周目分数上限 ≈32800，二周目 ≥1e6 → 二周目档必赢云端一周目旧档。
+ *  否则「开始二周目」会被云端旧档整个覆盖回去。 */
 export function progressScoreOf(s: {
   stage: number;
   stepIndex: number;
   branches: { ship: boolean; teashop: boolean; birthday: boolean; stay: boolean };
   day: number;
+  ngPlus?: { cycle: number } | boolean | unknown;
 }): number {
-  const branchesDone =
-    (s.branches.ship ? 1 : 0) +
-    (s.branches.teashop ? 1 : 0) +
-    (s.branches.birthday ? 1 : 0);
-  return s.stage * 10000 + s.stepIndex * 1000 + branchesDone * 200 + s.day;
+  return coreProgressScoreOf({
+    stage: s.stage,
+    stepIndex: s.stepIndex,
+    branches: s.branches,
+    day: s.day,
+    // `ngPlus` 可能缺失或是布尔（A2 老存档）→ `cycleOfNgPlus` 容错取值。
+    cycle: cycleOfNgPlus(s.ngPlus),
+  });
 }
 
 async function apiFetch(

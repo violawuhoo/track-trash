@@ -7,7 +7,7 @@
  * 遮罩点击关闭；关闭不重置任何东西（世界层不卸载，角色位置不动）。
  */
 import { useCallback, useEffect, useState } from 'react';
-import { launchCheck } from '@haola/game-core';
+import { BRANCHES, launchCheck } from '@haola/game-core';
 import { useGame } from '../store/gameStore';
 import { ItemCard } from './ItemCard';
 import { CraftSlots } from './CraftSlots';
@@ -43,6 +43,8 @@ export function BagDrawer() {
   const bag = useGame((s) => s.save.bag);
   const stage = useGame((s) => s.save.stage);
   const branches = useGame((s) => s.save.branches);
+  // G3「你认得路」（C2 批次）：上周目走过的支线。数组引用只在开新周目时变。
+  const branchesHistory = useGame((s) => s.save.ngPlus.branchesHistory);
   const keepsakeCount = useGame((s) => s.save.keepsakes.length);
   const accidentCount = useGame((s) => s.save.accidents);
   const logCount = useGame((s) => s.save.log.length);
@@ -156,6 +158,35 @@ export function BagDrawer() {
           </div>
 
           <CraftSlots slots={slots} onClear={clearSlot} onCraft={craft} />
+
+          {/*
+            支线面板（G3「你认得路」）。
+            四条支线各一行：本周目做完 / 上周目走过 / 还没动。
+            「上次走过」来自 `ngPlus.branchesHistory`（跨周目保留）。
+            注意：上周目做完的支线**本周目仍需重做**（世界进度清零）——
+            所以标记只是提示，不是「已完成」。
+          */}
+          <div className="drawer__branches">
+            <div className="drawer__brancheshead">支线</div>
+            {BRANCHES.map((b) => {
+              const done = branches[b.id] === true;
+              const before = branchesHistory.includes(b.id);
+              return (
+                <div
+                  key={b.id}
+                  className={`drawer__branch ${done ? 'is-done' : ''}`}
+                >
+                  <span className="drawer__branchname">{b.name}</span>
+                  {done && <span className="drawer__branchflag">本周目完成</span>}
+                  {!done && before && (
+                    <span className="drawer__branchflag drawer__branchflag--past">
+                      上次走过
+                    </span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
 
           {/*
             收尾区。GDD §2.5：「自由模式」= 完成迫降期（stage ≥ 2）后随时可选，

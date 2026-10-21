@@ -16,7 +16,15 @@ import { useGame } from '../store/gameStore';
 export function HintBar() {
   const stage = useGame((s) => s.save.stage);
   const stepIndex = useGame((s) => s.save.stepIndex);
-  const bag = useGame((s) => s.save.bag);
+  // 真凶修复（POLISH-HUD-1）：原先订阅整个 bag 对象引用，每次 collect/craft 都换引用，
+  // 导致 22~26 个 tag span 整体重渲染。改为订阅「持有 tag 的稳定签名」(string, Object.is 去重)：
+  // 只有持有成员关系（哪些物品数量>0）真正变化时才重渲染，单纯数量增减不触发重渲染。
+  const heldSig = useGame((s) =>
+    Object.keys(s.save.bag)
+      .filter((k) => (s.save.bag[k] ?? 0) > 0)
+      .sort()
+      .join(','),
+  );
   const tutorialStep = useGame((s) => s.save.tutorial.step);
   const [open, setOpen] = useState(false);
 
@@ -24,6 +32,12 @@ export function HintBar() {
   // 引导结束（step 到 free）自动回来。目标提示一条不少，只是换时段说。
   if (tutorialStep !== 'free') return null;
 
+  // 由签名重建「仅成员关系」的 bag：bagHasTag / missingForBag 只看 count>0、不关心具体数量
+  // （见 packages/game-core/src/search.ts），故把每个持有 id 归一为 1 即可，无需订阅 bag 对象引用
+  // （订阅引用就是掉帧元凶）。heldSig 为空串（无任何物品）时给空对象，避免 split 出 spurious '' 键。
+  const bag: Record<string, number> = heldSig
+    ? Object.fromEntries(heldSig.split(',').map((id): [string, number] => [id, 1]))
+    : {};
   const progress: Progress = { stage, stepIndex };
   const missing = missingForBag(progress, bag).slice(0, 2);
   const stageDef = getStage(stage as 1 | 2);

@@ -18,15 +18,15 @@ function seq(...vals: number[]): () => number {
 }
 
 /**
- * 临时往阶段 3 塞几步，测完还原。
+ * 临时**替换**阶段 3 的步骤，测完还原。
  *
- * A1a 只打通机制，不填 `STAGES[2].steps` 的正式内容，
- * 所以「阶段 3 能命中目标」这类断言必须临时注入步骤。
+ * A1b 起 `STAGES[2].steps` 已有正式三步。用「替换」而不是「追加」：
+ * 追加会让注入的步骤排在正式三步之后，索引全乱，A1a 时期的断言会全部失效。
  */
 function withStage3Steps<T>(steps: { id: string; requires: Tag[]; output: string }[], fn: () => T): T {
   const stage3 = STAGES[2]!;
   const backup = stage3.steps;
-  stage3.steps = [...backup, ...steps];
+  stage3.steps = steps;
   try {
     return fn();
   } finally {

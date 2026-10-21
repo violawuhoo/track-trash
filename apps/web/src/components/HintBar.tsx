@@ -29,6 +29,8 @@ export function HintBar() {
       .join(','),
   );
   const tutorialStep = useGame((s) => s.save.tutorial.step);
+  // 建设期是否已走满（boolean，Object.is 去重，不订阅对象引用）
+  const buildDone = useGame((s) => s.save.buildDone);
   const [open, setOpen] = useState(false);
 
   // 由签名重建「仅成员关系」的 bag：bagHasTag / missingForBag 只看 count>0、不关心具体数量
@@ -59,12 +61,26 @@ export function HintBar() {
   // 引导结束（step 到 free）自动回来。目标提示一条不少，只是换时段说。
   if (tutorialStep !== 'free') return null;
 
-  /** 阶段 3 没有标签目标，`missingForBag` 返回空 —— 给一句收尾提示 */
+  /**
+   * headline。
+   *
+   * 阶段 3 现在是**三步目标链**（不再是「凑一条三件套」），所以 headline 必须
+   * 反映步骤进度：第 N 步 / 共 3 步。缺标签部分仍要显示（那是玩家最需要的
+   * 一行字），拼成「第 N 步 / 共 3 步 · 缺：金属 / 能烧」。
+   *
+   * 走满三步后 buildDone = true、stepIndex = 3（= steps.length），
+   * 此时 missingForBag 返回空、当前步骤不存在，headline 走「建设期完成」分支。
+   */
+  const stage3StepTotal = stageDef?.steps.length ?? 0;
   const headline =
-    missing.length > 0
-      ? `缺：${missing.join(' / ')}`
-      : stage === 3
-        ? '凑齐一条三件套就能收尾'
+    stage === 3
+      ? buildDone
+        ? '建设期完成 · 三样都造出来了'
+        : missing.length > 0
+          ? `第 ${stepIndex + 1} 步 / 共 ${stage3StepTotal} 步 · 缺：${missing.join(' / ')}`
+          : `第 ${stepIndex + 1} 步 / 共 ${stage3StepTotal} 步`
+      : missing.length > 0
+        ? `缺：${missing.join(' / ')}`
         : '齐了，放进合成台试试';
 
   return (

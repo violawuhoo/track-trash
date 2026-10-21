@@ -100,7 +100,13 @@ export type ShapeName =
   | 'bar'
   | 'blob2'
   // 批 0 尾款：`wastepaper` 从 `sheet` 拆出来，让 D 断言凑满 60/60
-  | 'page';
+  | 'page'
+  // A1b：阶段 3「建设期」三步产物 + 纪念牌（几何直接取自
+  // docs/design/ASSETS-v3-SHAPES-snippet.ts，一个都没重画）
+  | 'placard'
+  | 'coil'
+  | 'sandglass'
+  | 'plaque';
 
 const SHAPES: Record<ShapeName, ShapeFn> = {
   // ───────── v1 原样保留 ─────────
@@ -281,6 +287,41 @@ const SHAPES: Record<ShapeName, ShapeFn> = {
     // 不会被描边吃成一块墨点（画在内侧就会）。
     `<path d="M34 30v12H22z" fill="${fill}"/>` +
     `<path d="M29 15H19M29 22h-6M29 29H20" stroke="${fill}"/>`,
+
+  // ───────── A1b · 阶段 3「建设期」产物（4 个）─────────
+  // 几何直接取自 docs/design/ASSETS-v3-SHAPES-snippet.ts，一个路径都没重画。
+  // 铁律：内部不写 stroke-width；开放 path 上的 fill 是空操作，要上色一律用 stroke="…"；
+  // 要挖洞必须用闭合路径。
+
+  /** 线圈 / 缠绕的导电线圈 —— generator 手摇发电机（mid / yellow） */
+  // 5 条不等长横线，横向条纹块
+  coil: (_fill) => `
+    <path d="M13 12h22M10 18h28M12 24h24M10 30h28M13 36h22"/>
+  `,
+
+  /** 计时瓶 / 沙漏 —— hourglass 时漏（mid / mint） */
+  // 上下对顶双三角（腰身细）；落沙点是闭合圆，fill 才有效
+  sandglass: (_fill) => `
+    <path d="M11 7h26l-13 17zM11 41h26L24 24z" fill="none"/>
+    <circle cx="24" cy="34" r="3" fill="${PALETTE.paper}"/>
+    <path d="M18 13h12"/>
+  `,
+
+  /** 告示板 / 立杆公告牌 —— notice 手写告示（mid / orange） */
+  // 竖杆 + 矩形板；板上两行墨痕长度递减，模拟手写字迹
+  placard: (fill) => `
+    <path d="M16 42V16"/>
+    <path d="M16 16h22v18H16z" fill="${fill}"/>
+    <path d="M20 22h14M20 28h9"/>
+  `,
+
+  /** 铭牌 / 纪念牌 —— ks_build 建设纪念牌（keepsake / pink） */
+  // 竖长牌身 + 宽底座（上窄下宽的「碑」形）
+  plaque: (fill) => `
+    <path d="M18 40V13h12v27z" fill="${fill}"/>
+    <path d="M20 19h8M20 25h8M20 31h6"/>
+    <path d="M14 40h20v6H14z" fill="${fill}"/>
+  `,
 };
 
 /**
@@ -351,6 +392,11 @@ const SHAPE_OF: Record<string, ShapeName> = {
   candle: 'candle',
   bar: 'bar',
   shop: 'shop',
+  // A1b：阶段 3 建设期产物 + 建设纪念牌
+  placard: 'placard',
+  coil: 'coil',
+  sandglass: 'sandglass',
+  plaque: 'plaque',
 };
 
 /**

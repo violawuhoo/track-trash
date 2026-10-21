@@ -181,7 +181,10 @@ describe('配方可达性', () => {
 describe('阶段 3 建设期（A1a 机制）', () => {
   /**
    * A1a 只打通机制、不填 `STAGES[2].steps` 的正式内容。
-   * 这里临时注入三步，验证「走满 → buildDone / ks_build / stage 不变 / 幂等」。
+   * 这里临时**替换**三步，验证「走满 → buildDone / ks_build / stage 不变 / 幂等」。
+   *
+   * A1b 起正式三步已落地（s3-1/s3-2/s3-3），这里用「替换」而不是「追加」，
+   * 否则注入的步骤会排在正式三步之后，索引全乱。
    */
   const S3_STEPS = [
     { id: 's3-t1', requires: ['金属', '抽象'] as Tag[], output: 'bracket' },
@@ -192,7 +195,7 @@ describe('阶段 3 建设期（A1a 机制）', () => {
   function withStage3Steps<T>(fn: () => T): T {
     const stage3 = STAGES[2]!;
     const backup = stage3.steps;
-    stage3.steps = [...backup, ...S3_STEPS];
+    stage3.steps = [...S3_STEPS];
     try {
       return fn();
     } finally {

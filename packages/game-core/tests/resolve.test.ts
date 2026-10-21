@@ -14,10 +14,12 @@ const at = (stage: 1 | 2 | 3 | 4, stepIndex: number): Progress => ({ stage, step
 const freePlay = (): Progress => at(3, 99);
 
 /**
- * 临时往阶段 3 塞几步，测完还原。
+ * 临时**替换**阶段 3 的步骤，测完还原。
  *
- * A1a 只打通机制、不填 `STAGES[2].steps` 的正式内容，
- * 所以「阶段 3 能命中目标」的断言必须临时注入步骤。
+ * A1b 起 `STAGES[2].steps` 已有正式三步（s3-1/s3-2/s3-3）。
+ * 这里用「替换」而不是「追加」：追加会让注入的步骤排在正式三步之后，
+ * 索引全乱，A1a 时期写下的断言（命中第 1 个注入步）会全部失效。
+ * 替换语义让「机制测试」与「正式内容测试」互不干扰。
  */
 function withStage3Steps<T>(
   steps: { id: string; requires: Tag[]; output: string }[],
@@ -25,7 +27,7 @@ function withStage3Steps<T>(
 ): T {
   const stage3 = STAGES[2]!;
   const backup = stage3.steps;
-  stage3.steps = [...backup, ...steps];
+  stage3.steps = steps;
   try {
     return fn();
   } finally {

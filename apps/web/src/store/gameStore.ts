@@ -492,9 +492,17 @@ export const useGame = create<GameStore>((set, get) => {
       let dialog: string[] = [];
 
       if (res.outcome.result.kind === 'stage') {
-        const cleared = res.state.stage !== save.stage;
-        dialog = cleared
-          ? lines(save.stage === 1 ? 'clear1' : 'clear2')
+        // 阶段播报**统一由 core 说了算**（A1b 任务 9）。
+        // 旧写法是 web 自己用 `res.state.stage !== save.stage` 推断「阶段是否跃迁」，
+        // 但阶段 3 走满时 stage 保持 3 不变 → 推断恒为 false → clear3 永远不播。
+        // 现在直接读 core 返回的 dialogueKey：clear1 / clear2 / clear3 三条走同一条路。
+        // 注意只认「阶段完成」这三个键：core 在非阶段跃迁时也会给 'craft'，
+        // 那种情况仍走下面的产物播报（带物品名和描述），不能让 dialogueKey 把它盖掉。
+        const dk = res.dialogueKey;
+        const isStageClear =
+          dk === 'clear1' || dk === 'clear2' || dk === 'clear3';
+        dialog = isStageClear
+          ? lines(dk)
           : [`「${output.name}」成了。${output.desc}`];
         get().showToast(output.name, output.desc);
       } else {

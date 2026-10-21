@@ -1,7 +1,7 @@
 import type { Item } from './types';
 
 /**
- * 全物品表。80 件。
+ * 全物品表。84 件。
  *
  * kind 说明：
  *  - base       区域里能刷出来的基础物品
@@ -68,6 +68,12 @@ export const ITEMS: Item[] = [
   { id: 'doorplate', name: '加厚门板', desc: '厚度翻了三倍。现在它挡得住风，也挡得住你自己。', tags: ['中间', '部件', '实体', '能挡风'], kind: 'mid', color: 'orange', icon: 'door' },
   { id: 'hopefood', name: '有希望的口粮', desc: '味道一般，但吃完之后觉得明天也许还行。', tags: ['中间', '实体', '能呼吸'], kind: 'mid', color: 'pink', icon: 'bowl' },
   { id: 'hotsandwich', name: '热三明治', desc: '加热过的。同样的三明治，热了之后居然让人有点感动。', tags: ['中间', '实体', '能呼吸'], kind: 'mid', color: 'orange', icon: 'bowl' },
+  // 阶段 3「建设期」三步目标链的产物（GDD §4.1）。
+  // 每件都有一条同构精确配方（见 recipes.ts R7/R8/R9），既是「提前备料」的路，
+  // 也是 check-content 断言 A（无孤立物品）要求的引用来源。
+  { id: 'notice', name: '手写告示', desc: '把缺页手册上唯一能看懂的一段抄在木板上。抄错了一个字，意思还是那样。', tags: ['中间', '知识', '部件'], kind: 'mid', color: 'orange', icon: 'placard' },
+  { id: 'generator', name: '手摇发电机', desc: '摇十圈发三度电。剩下七圈是热身，第九圈开始算加班。', tags: ['中间', '能烧', '部件'], kind: 'mid', color: 'yellow', icon: 'coil' },
+  { id: 'hourglass', name: '时漏', desc: '两个轮子互相追赶，追上一次就是一天。它不告诉你该不该走，只告诉你已经待了多久。', tags: ['中间', '部件', '抽象'], kind: 'mid', color: 'mint', icon: 'sandglass' },
 
   // ───────── 飞船部件 ship ─────────
   { id: 'joystick', name: '应急操纵杆', desc: '搋子加胶带。握感奇怪，但确实能推。', tags: ['部件', '实体', '金属'], kind: 'ship', color: 'orange', icon: 'joystick' },
@@ -114,6 +120,7 @@ export const ITEMS: Item[] = [
   { id: 'ks_fail', name: '起飞失败纪念章', desc: '你试过了。章上刻着「差一点」，字体很小。', tags: ['纪念品'], kind: 'keepsake', color: 'purple', icon: 'broken' },
   { id: 'ks_shop', name: '奶茶店招牌', desc: '字很大。外星人路过确实能看见。', tags: ['纪念品'], kind: 'keepsake', color: 'yellow', icon: 'sign' },
   { id: 'ks_birthday', name: '石头生日蛋糕', desc: '不能吃，但石头很喜欢。它唱了一首歌。', tags: ['纪念品'], kind: 'keepsake', color: 'pink', icon: 'candle' },
+  { id: 'ks_build', name: '建设纪念牌', desc: '三件东西做成的牌。它证明你在这里造出了东西，不只是捡到了东西。', tags: ['纪念品'], kind: 'keepsake', color: 'pink', icon: 'plaque' },
 ];
 
 export const ITEM_MAP: Readonly<Record<string, Item>> = Object.freeze(

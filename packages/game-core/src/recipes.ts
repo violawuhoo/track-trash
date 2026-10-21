@@ -1,7 +1,7 @@
 import type { AccidentRule, Recipe, Tag } from './types';
 
 /**
- * 精确配方：36 条。
+ * 精确配方：39 条。
  *
  * 精确配方不是推进阶段的唯一途径，只是快捷路径。
  * 判定优先级：阶段目标 > 精确配方 > 风险 > 意外配对 > 兜底。
@@ -49,6 +49,16 @@ export const RECIPES: Recipe[] = [
   { a: 'tire', b: 'windbreak', out: 'bedframe' },
   { a: 'fossil', b: 'crystal', out: 'signal' },
   { a: 'photo', b: 'homework', out: 'menu' },
+  // 阶段 3「建设期」三步产物的同构精确配方（GDD §4.3 R7/R8/R9）。
+  // 「同构」= 与 s3-1/s3-2/s3-3 的 requires 完全等价：
+  //   R7 tape(粘)+manual(知识) ≡ s3-1 粘+知识 → notice
+  //   R8 crowbar(金属)+fuel(能烧) ≡ s3-2 金属+能烧 → generator
+  //   R9 echo(抽象)+broom(能推) ≡ s3-3 能推+抽象 → hourglass
+  // 作用：给玩家一条「提前备料」的路；同时满足 check-content 断言 A
+  // （每个非 accident/keepsake 物品必须被配方引用）。
+  { a: 'tape', b: 'manual', out: 'notice' },
+  { a: 'crowbar', b: 'fuel', out: 'generator' },
+  { a: 'echo', b: 'broom', out: 'hourglass' },
 ];
 
 /** 无序 key：两个 id 排序后拼接，保证 a+b 与 b+a 命中同一条 */

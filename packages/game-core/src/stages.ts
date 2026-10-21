@@ -67,9 +67,15 @@ export const STAGES: StageDef[] = [
   {
     id: 3,
     name: '建设期',
-    blurb: '接下来做什么，你自己定。',
+    blurb: '能造出东西了。接下来造什么，你定。',
     unlock: ['market', 'cave'],
-    steps: [],
+    // 三步目标链（GDD §2.1）。每步都有一条同构精确配方（recipes.ts R7/R8/R9），
+    // 但不是唯一路径 —— 标签并集覆盖 requires 即通过。
+    steps: [
+      { id: 's3-1', requires: ['粘', '知识'], output: 'notice' },
+      { id: 's3-2', requires: ['金属', '能烧'], output: 'generator' },
+      { id: 's3-3', requires: ['能推', '抽象'], output: 'hourglass' },
+    ],
   },
 ];
 

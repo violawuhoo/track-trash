@@ -18,3 +18,6 @@ shots/
 .chrome-tmp/
 .preview/
 .vite-tmp/
+
+# 测试临时产物（run-tests.mjs 的 vitest TMP 根 + 临时探针脚本）
+.tmp/

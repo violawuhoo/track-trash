@@ -19,6 +19,7 @@ import { describe, expect, it } from 'vitest';
 import {
   AREA_POOLS,
   BRANCHES,
+  LOGS,
   RECIPES,
   STAGES,
   createInitialState,
@@ -317,18 +318,28 @@ describe('阶段 3 三步目标链（正式内容）', () => {
     // ⑧ / ⑧b 只验「直接产出候选品的那条配方」。
     // 但候选品的材料本身可能也是合成产物（如 toolstand ← valvework ← mirror+tape），
     // 若中间层被阶段目标截胡，支线照样做不出来 —— 所以要按依赖闭包逐层验。
+    //
+    // ⚠️ C1 批次扩展：护栏的「目标集合」从「支线候选品」扩到
+    // 「支线候选品 ∪ 前任日志载体」。理由：日志载体也是玩家必须做得出来的东西，
+    // 同样的截胡会把 8 篇日志变成拿不到的内容。闭包逻辑不变，只是多了一批种子。
     const branchTargets = new Set<string>();
     for (const branch of BRANCHES) {
       for (const options of branch.requires) {
         for (const id of options) branchTargets.add(id);
       }
     }
+    // 日志载体也是必须可达的目标（C1 批次新增）
+    for (const log of LOGS) branchTargets.add(log.carrierId);
 
-    // 反查：能产出某 id 的配方（无序键）
+    // 反查：能产出某 id 的配方。
+    //
+    // ⚠️ C1 批次修一个既有缺陷：这里原来用「无序对 `${a}|${b}`」做键，
+    // 却用**物品 id** 去查（`producersOf.get(id)`）—— 键和查询对不上，
+    // 查出来永远是 undefined，闭包恒为空 → 护栏是**空跑**的（vacuous pass）。
+    // 现在改成按**产物**建键。
     const producersOf = new Map<string, { a: string; b: string }>();
     for (const r of RECIPES) {
-      producersOf.set(`${r.a}|${r.b}`, { a: r.a, b: r.b });
-      producersOf.set(`${r.b}|${r.a}`, { a: r.a, b: r.b });
+      if (!producersOf.has(r.out)) producersOf.set(r.out, { a: r.a, b: r.b });
     }
 
     // 闭包：从候选品往下找材料，直到全是可捡的 base 物品
@@ -348,14 +359,83 @@ describe('阶段 3 三步目标链（正式内容）', () => {
       }
     }
 
-    // 闭包里每条配方，在三个步骤位上都必须走精确配方
+    // 闭包里每条配方，在阶段 3 的三个步骤位上都必须得到**同一个产物**。
+    //
+    // ⚠️ C1 批次修判定口径：原来要求 `result.kind === 'recipe'`，
+    // 但 R8 `crowbar+fuel→generator` 与 s3-2、R9 `echo+broom→hourglass` 与 s3-3
+    // 是**同构**的 —— 它们在阶段 3 被阶段目标命中时，产物跟精确配方**完全一样**，
+    // 玩家拿到的就是想要的东西，不构成截胡。
+    // 所以判据统一为「产物是否相同」，不再看 kind。
     const culprits: string[] = [];
     for (const [out, r] of closure) {
       for (let stepIndex = 0; stepIndex < S3_STEPS.length; stepIndex++) {
         const { result } = resolveMix(r.a, r.b, at(3, stepIndex));
-        if (result.kind !== 'recipe' || result.output !== out) {
-          culprits.push(`${r.a}+${r.b}→${out} 在 s3-${stepIndex + 1} 被截胡（${result.kind}）`);
+        if (result.output !== out) {
+          culprits.push(`${r.a}+${r.b}→${out} 在 s3-${stepIndex + 1} 被截胡（${result.kind}→${result.output}）`);
         }
+      }
+    }
+    expect(culprits).toEqual([]);
+  });
+
+  it('⑧d 前任日志载体不被阶段 1 / 2 的目标链**永久**截胡（8 件逐条验证）', () => {
+    // ⑧c 只验阶段 3，且只验「阶段 3 三步都安全」。日志载体 R16–R23 分别在
+    // 阶段 1 / 2 / 3 才有材料，所以还要验阶段 1、2。
+    //
+    // ⚠️ C1 批次修断言口径：原来要求「每个步位都不能被阶段目标吞掉」——
+    // 这**过严**。阶段 2 的 s2-1（实体+实体）/ s2-3（风险+实体）门槛极宽，
+    // 30+ 条既有配方（theoryfuel / menu / landdeed / toolstand / warmchair …）
+    // 都在这些步位被阶段目标优先命中 —— 这是「阶段目标 > 精确配方」的**正常设计**，
+    // 不是缺陷（阶段目标本身就是玩家要推进的主线）。
+    //
+    // 真正的护栏是：**每件载体在每个阶段，至少存在一个步位能命中精确配方**，
+    // 也就是「不会被永久截胡、永远有一条路能走」。
+    // 顺带把安全步位写进断言消息，失败时能直接看出该在第几步做。
+    const logCarriers = LOGS.map((l) => l.carrierId);
+    expect(logCarriers).toHaveLength(8);
+
+    const culprits: string[] = [];
+    for (const log of LOGS) {
+      // 找出产出该载体的配方
+      const r = RECIPES.find((x) => x.out === log.carrierId);
+      if (!r) {
+        culprits.push(`${log.carrierId} 没有配方`);
+        continue;
+      }
+      for (const stage of [1, 2, 3] as const) {
+        const steps = STAGES[stage - 1]!.steps;
+        const safe: number[] = [];
+        for (let stepIndex = 0; stepIndex < steps.length; stepIndex++) {
+          const { result } = resolveMix(r.a, r.b, at(stage, stepIndex));
+          if (result.output === log.carrierId) safe.push(stepIndex + 1);
+        }
+        if (safe.length === 0) {
+          culprits.push(
+            `${r.a}+${r.b}→${log.carrierId} 在阶段 ${stage} 的所有步位都被截胡（无任何可命中步位）`,
+          );
+        }
+      }
+    }
+    expect(culprits).toEqual([]);
+  });
+
+  it('⑧e 阶段 3 走完后回归纯配方判定，8 件日志载体仍可合成', () => {
+    // buildDone 之后 stepIndex = 3 = steps.length → 内层守卫放行。
+    // 这条是「建设期完成后还能不能补合日志载体」的保证：
+    // 玩家在建设期完成前可能错过了 L1–L5 的材料，完成后必须还有路可走。
+    const state: SaveState = {
+      ...createInitialState(),
+      stage: 3,
+      stepIndex: 3,
+      buildDone: true,
+    };
+    const culprits: string[] = [];
+    for (const log of LOGS) {
+      const r = RECIPES.find((x) => x.out === log.carrierId);
+      if (!r) continue;
+      const { result } = resolveMix(r.a, r.b, at(3, state.stepIndex));
+      if (result.output !== log.carrierId) {
+        culprits.push(`${log.carrierId} 在建设期完成后被截胡（${result.kind}→${result.output}）`);
       }
     }
     expect(culprits).toEqual([]);

@@ -207,14 +207,22 @@ describe('B. startNextCycle（保留 / 重置清单，GDD §7.1）', () => {
     const after = startNextCycle(before);
 
     // 实现层：逐字段对比，得出「被重置」与「原样保留」的字段集合。
-    // `ngPlus` 特殊处理：容器保留，但 `cycle` 会 +1。
-    const KEYS = Object.keys(before) as (keyof SaveState)[];
+    //
+    // ⚠️ `ngPlus` 拆到**子字段**粒度（`ngPlus.endings` / `ngPlus.readLogs` /
+    // `ngPlus.branchesHistory` / `ngPlus.cycle`）：
+    // core 往 `NgPlusState` 里加第五个字段时，守恒断言要能看出
+    // 「多了一份跨周目档案没被告知玩家」→ 漏字段复发路径被堵死。
+    //
+    // `ngPlus.cycle` 虽然数值 +1，但它是**跨周目累加**的档案（保留），
+    // 不是「被清零的进度」→ 归入保留。
     const resetByImpl = new Set<string>();
     const keptByImpl = new Set<string>();
-    for (const k of KEYS) {
+    for (const k of Object.keys(before) as (keyof SaveState)[]) {
       if (k === 'schemaVersion') continue; // 存档格式版本，与周目无关
       if (k === 'ngPlus') {
-        keptByImpl.add(k);
+        for (const sub of Object.keys(before.ngPlus)) {
+          keptByImpl.add(`ngPlus.${sub}`);
+        }
         continue;
       }
       const a = before[k];
@@ -317,7 +325,7 @@ describe('B. startNextCycle（保留 / 重置清单，GDD §7.1）', () => {
     const keptFields = NEXT_CYCLE_KEPT.flatMap((b) => b.fields);
     expect(resetFields).toContain('crafts');
     expect(resetFields).toContain('logsFound');
-    expect(keptFields).toContain('ngPlus');
+    expect(keptFields).toContain('ngPlus.branchesHistory');
     // 文案要让玩家明白后果，不只是列字段名
     expect(resetText).toContain('合成次数');
     expect(resetText).toContain('记录载体');

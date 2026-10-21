@@ -16,14 +16,12 @@
  *
  * ## ⚠️ 清单必须与 core 的 `startNextCycle()` 逐字段对齐
  *
- * 下面的「保留 / 重置」两张表是**从 `packages/game-core/src/ngplus.ts` 的
- * `startNextCycle()` 逐字段抄出来的**。core 那边加字段时，**必须回来更新这两张表**，
- * 否则玩家看到的清单会漏掉「其实会被清掉的东西」——
- * 而这一页存在的全部意义就是「把你会失去什么摆出来」，漏一条就等于没说清。
- *
  * QA 2026 复审抓到过一次真实遗漏：初版「重置」段只列了 3 条，漏了 `crafts` 与
  * `logsFound` —— 而 `crafts` 归零**直接卡住 L1（需合成 3 次）与 L5（需合成 14 次）
  * 的解锁**。玩家看完清单以为二周目能直接重读 L1–L5，实际上要重新攒次数。
+ *
+ * 根因是「core 一份、web 一份、两份靠人同步」。所以现在清单**只有一份**：
+ * core 的 `NEXT_CYCLE_KEPT` / `NEXT_CYCLE_RESET`（见下方「字段对照表在哪」）。
  *
  * ### 文案是定稿
  *
@@ -37,46 +35,28 @@
  * 手写清单必然漂移（改 core 的人不会记得去改 UI 的清单）。
  * 现在清单是 core 的 `NEXT_CYCLE_KEPT` / `NEXT_CYCLE_RESET`，
  * 与 `startNextCycle()` 放在同一个文件里，
- * 由 `ngplus.test.ts` 的 **B5 断言**守着：
- * **core 加字段却没加清单 → 断言红**（少字段 / 多字段都红）。
+ * 由 `ngplus.test.ts` 的 **B5 断言**守着（少字段 / 多字段 / 分类错 都红）。
  * 本文件只负责把 core 的清单**渲染成玩家能读的话** + 挂上计数。
  *
- * ### 保留（`startNextCycle` 原样带着走）
+ * ### 字段对照表在哪
  *
- * | 字段                | 含义                          | 玩家看到的说法              |
- * |---------------------|-------------------------------|-----------------------------|
- * | `ngPlus.cycle`      | 周目序号 **+1**（唯一变化点）  | 「这是你的第 N 周目」        |
- * | `ngPlus.endings`    | 已解锁的结局                  | 「已解锁的结局（N 个）」     |
- * | `ngPlus.readLogs`   | 读过的前任记录（G1 靠它）     | 「读过的前任记录（N 篇）」   |
- * | `ngPlus.branchesHistory` | 走过的支线（G3 靠它标「上次走过」） | 「走过的支线（N 条）」 |
- * | `keepsakes`         | 纪念品（GDD §7.5：全部保留）  | 「纪念品（N 件）」           |
+ * **不在这个文件里。** 字段对照表在 core：`packages/game-core/src/ngplus.ts` 的
+ * `NEXT_CYCLE_KEPT` / `NEXT_CYCLE_RESET`，与 `startNextCycle()` 同一个文件，
+ * 每条自带 `fields`（覆盖哪些存档字段）、`countOf`（计数来源）、`text`、`note`。
  *
- * ### 重置（`startNextCycle` 清零 / 归位）
+ * ⚠️ **这里刻意不抄第二份字段清单**：2026 QA 复审抓到的漏字段（`crafts` /
+ * `logsFound`），根因就是「core 一份、web 一份、两份靠人同步」。
+ * 抄一份 = 漏字段必然复发。所以本组件**只渲染 core 的 `text` + `countOf`**。
  *
- * | 字段            | 归位到            | 玩家看到的说法                          |
- * |-----------------|-------------------|-----------------------------------------|
- * | `day`           | `1`               | 「天数」                                |
- * | `bag`           | `{}`              | 「背包」                                |
- * | `discovered`    | `{}`              | 「地面上捡到过的东西」                  |
- * | `areaId`        | `'crash'`         | 「回到坠毁点的第 1 天」                 |
- * | `scene`         | `[]`              | 「地面上的东西」                        |
- * | `stage`         | `1`               | 「阶段进度」                            |
- * | `stepIndex`     | `0`               | 「阶段进度」                            |
- * | `buildDone`     | `false`           | 「阶段进度」                            |
- * | `branches`      | 四个全 `false`    | 「已完成的支线」                        |
- * | `crafts`        | `0`               | 「累计合成次数」⚠️ 会卡住 L1 / L5 解锁  |
- * | `logsFound`     | `[]`              | 「本周目拿到的记录载体」⚠️ 要重新做一遍  |
- * | `accidents`     | `0`               | 「意外次数」                            |
- * | `log`           | 只剩一条系统日志  | 「这一周的世界日志」                    |
- * | `ending`        | `null`            | 「本周目的结局」                        |
- * | `launchAttempts`| `0`               | 「起飞尝试与失败的次数」                |
- * | `launchFailures`| `0`               | 「起飞尝试与失败的次数」                |
+ * 完整性由 `packages/game-core/tests/ngplus.test.ts` 的 **B5 断言**守着，
+ * 两个方向都查：
+ * - core 改了字段却没加清单 → 红（少字段）；
+ * - 清单列了字段但 core 没改 → 红（多字段）；
+ * - 分类错（清单标「重置」但实现是保留）→ 红。
  *
- * `schemaVersion` 不动（存档格式版本，与周目无关）。
- * web 侧的 `world`（地面布局）与 `tutorial`（引导卡状态）不在这两张表里：
- * `world` 在 `startNewCycle` 里被 `redistribute()` 重铺（不是「失去」，
- * 是「回到原位」）；`tutorial` 走 `fromCore(nextCore, save.world, save.tutorial)`
- * 原样带过去（引导卡是 UI 状态，不是进度）。
+ * `ngPlus` 的四个子字段（`endings` / `readLogs` / `branchesHistory` / `cycle`）
+ * 在清单里是**点号路径**（`ngPlus.endings` …），拆到子字段粒度，
+ * 这样 core 往 `NgPlusState` 里加第五个字段时断言也会红。
  *
  * ## 文案口径
  *
@@ -112,9 +92,11 @@ import { NEXT_CYCLE_KEPT, NEXT_CYCLE_RESET } from '@haola/game-core';
 /**
  * 本周目增益（GDD §7.1 G1–G4）。
  *
- * ⚠️ **文案待定稿**（工程自拟）。GDD 只给了「具体表现」的技术描述，
- * 这里转写成玩家能读的一句话。四条的**效果**全部已实现（core + web），
- * 只有措辞等文策渊过一遍。
+ * 文案是**定稿**（2026-10-22 文策渊，`docs/design/CONTENT-v3-NGPLUS-UI-COPY.md` §3），
+ * 四条**逐字照抄**，不改标点与语气。
+ *
+ * ⚠️ G4 的方向钉死：实现是「石头唱得比上次**少一遍**」，
+ * 所以文案只能写「少唱一遍」——「多唱一句」与实现相反，是被 QA 判过的错误方向。
  */
 const GAINS: readonly { id: string; name: string; text: string }[] = [
   {

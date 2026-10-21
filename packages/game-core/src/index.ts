@@ -97,6 +97,8 @@ export {
   recordReadLog,
   startNextCycle,
   type NextCycleBullet,
+  type NextCycleField,
+  type NgPlusFieldPath,
 } from './ngplus';
 export {
   CARRIER_TO_LOG,

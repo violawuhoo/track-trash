@@ -191,9 +191,34 @@ export function recordBranch(np: NgPlusState, branchId: BranchId): NgPlusState {
  *   里面用 `【N】` 占位待插入的计数。core 只管「不许漏字段 + 不许改文案」。
  * - `note`：「——」之后的**后果说明**，UI 用次要色渲染（定稿 §1.2）。
  */
+/**
+ * 清单能指名的存档字段。
+ *
+ * 顶层字段用 `keyof SaveState`；`ngPlus` 的子字段用 `ngPlus.<子字段>` 点号形式。
+ *
+ * ⚠️ **为什么 `ngPlus` 要拆到子字段**：
+ * `ngPlus` 是一个**容器**，它里面的 `endings` / `readLogs` / `branchesHistory` /
+ * `cycle` 是四份**各自独立**的档案。如果清单只写 `ngPlus`，
+ * 那么 core 往 `NgPlusState` 里加第五个字段（比如 `trophies`）时，
+ * 守恒断言看不出「多了一份档案没被告知玩家」→ 漏字段复发。
+ * 拆到子字段后，加字段 = 断言红。
+ */
+export type NextCycleField = keyof SaveState | NgPlusFieldPath;
+
+/**
+ * `ngPlus` 容器下的子字段（点号路径）。
+ *
+ * 这些是**跨周目档案**的四份独立内容，确认页逐条告知玩家（K1–K5）。
+ */
+export type NgPlusFieldPath =
+  | 'ngPlus.endings'
+  | 'ngPlus.readLogs'
+  | 'ngPlus.branchesHistory'
+  | 'ngPlus.cycle';
+
 export interface NextCycleBullet {
   /** 这一条覆盖的存档字段 */
-  fields: readonly (keyof SaveState)[];
+  fields: readonly NextCycleField[];
   /** UI 计数的来源；不填 = 这条不显示计数 */
   countOf?: 'endings' | 'readLogs' | 'branchesHistory' | 'keepsakes' | 'cycle';
   /** 给玩家看的一句话。`【N】` 会被计数替换 */
@@ -218,19 +243,19 @@ export interface NextCycleBullet {
  */
 export const NEXT_CYCLE_KEPT: readonly NextCycleBullet[] = Object.freeze([
   Object.freeze({
-    fields: Object.freeze(['ngPlus'] as const),
+    fields: Object.freeze(['ngPlus.endings'] as const),
     countOf: 'endings' as const,
     text: '已解锁的结局（【N】个）',
     note: '那几格不会灭',
   }),
   Object.freeze({
-    fields: Object.freeze(['ngPlus'] as const),
+    fields: Object.freeze(['ngPlus.readLogs'] as const),
     countOf: 'readLogs' as const,
     text: '读过的前任记录（【N】篇）',
     note: '读过的不用再读一遍',
   }),
   Object.freeze({
-    fields: Object.freeze(['ngPlus'] as const),
+    fields: Object.freeze(['ngPlus.branchesHistory'] as const),
     countOf: 'branchesHistory' as const,
     text: '走过的支线（【N】条）',
     note: '面板上会标出「上次走过」',
@@ -242,7 +267,7 @@ export const NEXT_CYCLE_KEPT: readonly NextCycleBullet[] = Object.freeze([
     note: '你拿到的东西不会丢',
   }),
   Object.freeze({
-    fields: Object.freeze(['ngPlus'] as const),
+    fields: Object.freeze(['ngPlus.cycle'] as const),
     countOf: 'cycle' as const,
     text: '这是你的第 【N】 周目',
   }),

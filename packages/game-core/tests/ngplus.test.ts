@@ -19,6 +19,8 @@ import {
   BRANCH_IDS,
   ENDING_IDS,
   LOGS,
+  NEXT_CYCLE_KEPT,
+  NEXT_CYCLE_RESET,
   RECIPES,
   createInitialState,
   createNgPlus,
@@ -111,6 +113,12 @@ describe('B. startNextCycle（保留 / 重置清单，GDD §7.1）', () => {
     return {
       ...base,
       day: 42,
+      // ⚠️ `areaId` / `scene` 必须填成**非重置值**：
+      // B5 断言用「前后是否变化」来判断字段属于「重置」还是「保留」，
+      // 如果 before 已经等于重置目标（areaId='crash' / scene=[]），
+      // 前后相同 → 会被误判成「保留」→ 断言红。
+      areaId: 'junkyard',
+      scene: ['旧场景'],
       stage: 3,
       stepIndex: 2,
       buildDone: true,
@@ -177,6 +185,83 @@ describe('B. startNextCycle（保留 / 重置清单，GDD §7.1）', () => {
 
   it('B4 不 bump schemaVersion（二周目绝不允许让现存存档作废）', () => {
     expect(startNextCycle(playedState()).schemaVersion).toBe(createInitialState().schemaVersion);
+  });
+
+  /**
+   * B5（2026 QA 复审新增）：**清单与实现不得漂移**。
+   *
+   * QA 抓到过一个真实缺陷：确认页给玩家看的「重置」清单漏了 `crafts` 与 `logsFound`，
+   * 而 `crafts` 归零**直接卡住 L1（需合成 3 次）与 L5（需合成 14 次）的解锁** ——
+   * 玩家看完清单以为二周目能直接重读 L1–L5，实际上要重新攒次数。
+   *
+   * 漏字段的根因是清单靠人手抄。这条断言把
+   * `NEXT_CYCLE_KEPT` / `NEXT_CYCLE_RESET` 里出现的字段并集，
+   * 与 `startNextCycle()` **实际改动/保留的字段集合**逐一比对：
+   * - core 加了字段却没加清单 → 少字段 → 红
+   * - 清单列了却实现没动 → 多字段 → 红
+   *
+   * 这样清单的完整性由机器守，不再依赖 code review 记得住。
+   */
+  it('B5 确认页清单（NEXT_CYCLE_KEPT / NEXT_CYCLE_RESET）与 startNextCycle 实现一致', () => {
+    const before = playedState();
+    const after = startNextCycle(before);
+
+    // 实现层：逐字段对比，得出「被重置」与「原样保留」的字段集合。
+    // `ngPlus` 特殊处理：容器保留，但 `cycle` 会 +1。
+    const KEYS = Object.keys(before) as (keyof SaveState)[];
+    const resetByImpl = new Set<string>();
+    const keptByImpl = new Set<string>();
+    for (const k of KEYS) {
+      if (k === 'schemaVersion') continue; // 存档格式版本，与周目无关
+      if (k === 'ngPlus') {
+        keptByImpl.add(k);
+        continue;
+      }
+      const a = before[k];
+      const b = after[k];
+      const same = JSON.stringify(a) === JSON.stringify(b);
+      if (same) keptByImpl.add(k);
+      else resetByImpl.add(k);
+    }
+
+    // 清单层：两个列表的 fields 并集，按「重置 / 保留」分开。
+    const listedReset = new Set<string>();
+    for (const b of NEXT_CYCLE_RESET) for (const f of b.fields) listedReset.add(f);
+    const listedKept = new Set<string>();
+    for (const b of NEXT_CYCLE_KEPT) for (const f of b.fields) listedKept.add(f);
+
+    // 清单必须**恰好**覆盖实现改动的全部字段（不多不少）。
+    const implChanged = new Set([...resetByImpl, ...keptByImpl]);
+    const missing = [...implChanged].filter((f) => !listedReset.has(f) && !listedKept.has(f));
+    const extra = [...listedReset, ...listedKept].filter((f) => !implChanged.has(f));
+    expect(missing, `这些字段 startNextCycle 会动，但清单里没列：${missing.join(', ')}`).toEqual([]);
+    expect(extra, `这些字段清单里列了，但 startNextCycle 根本不动：${extra.join(', ')}`).toEqual([]);
+
+    // 分类也要对：清单标「重置」的，实现必须真的重置了。
+    for (const f of listedReset) {
+      expect(resetByImpl.has(f), `${f} 被清单标为重置，但实现里它是保留的`).toBe(true);
+    }
+    for (const f of listedKept) {
+      expect(keptByImpl.has(f), `${f} 被清单标为保留，但实现里它被重置了`).toBe(true);
+    }
+  });
+
+  it('B6 清单必须点名 crafts / logsFound / branchesHistory（QA 指名的三个漏项）', () => {
+    // 这三个字段是 2026 QA 复审点名的漏项：
+    // - `crafts` 归零卡住 L1（合成 3 次）与 L5（合成 14 次）的解锁
+    // - `logsFound` 归零 = 本周目拿到的记录载体要重新做
+    // - `branchesHistory` 是 G3「上次走过」的数据源，漏列玩家会以为要重走
+    const resetText = NEXT_CYCLE_RESET.map((b) => b.text).join(' | ');
+    const keptText = NEXT_CYCLE_KEPT.map((b) => b.text).join(' | ');
+    const resetFields = NEXT_CYCLE_RESET.flatMap((b) => b.fields);
+    const keptFields = NEXT_CYCLE_KEPT.flatMap((b) => b.fields);
+    expect(resetFields).toContain('crafts');
+    expect(resetFields).toContain('logsFound');
+    expect(keptFields).toContain('ngPlus');
+    // 文案要让玩家明白后果，不只是列字段名
+    expect(resetText).toContain('合成次数');
+    expect(resetText).toContain('记录载体');
+    expect(keptText.length).toBeGreaterThan(0);
   });
 });
 

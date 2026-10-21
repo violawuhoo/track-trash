@@ -165,6 +165,110 @@ export function recordBranch(np: NgPlusState, branchId: BranchId): NgPlusState {
 }
 
 /**
+ * 「开新周目」时，玩家会**保留**什么 / **失去**什么 —— 给 UI 确认页用的数据。
+ *
+ * ## 为什么放在 core 而不是 web
+ *
+ * 2026 QA 复审抓到一个真实缺陷：确认页的「重置」清单漏了 `crafts` 与 `logsFound`，
+ * 而 `crafts` 归零会**直接卡住 L1（需合成 3 次）与 L5（需合成 14 次）的解锁**。
+ * 玩家看完清单以为二周目能直接重读 L1–L5，实际上要重新攒次数。
+ *
+ * 漏字段的根因是**清单是人手抄的**：core 加字段 → 没人记得去改 UI 的清单。
+ * 所以清单搬到 core，**跟 `startNextCycle()` 放在一起**，
+ * 并由 `ngplus.test.ts` 的断言守着：
+ * **每个被 `startNextCycle` 改动/保留的字段，都必须出现在这两个列表里。**
+ * core 加字段却没加清单 → 断言红。
+ *
+ * ## 字段口径
+ *
+ * - `fields`：这条文案覆盖的存档字段（可能多个，合成一句话）。
+ *   守恒断言按 `fields` 的并集与实际行为比对。
+ * - `countOf`：UI 要显示的计数来源（「N 个」里的 N 从哪来）。
+ *   确认页把 `ngPlus` 的三个子集合和 `keepsakes` 拆成四条各带计数，
+ *   所以这里给的是**子集合名**而不是顶层字段名。
+ * - `text`：给玩家看的一句话。措辞是文案层的活儿，core 只管「不许漏字段」。
+ */
+export interface NextCycleBullet {
+  /** 这一条覆盖的存档字段 */
+  fields: readonly (keyof SaveState)[];
+  /** UI 计数的来源；不填 = 这条不显示计数 */
+  countOf?: 'endings' | 'readLogs' | 'branchesHistory' | 'keepsakes';
+  /** 给玩家看的一句话 */
+  text: string;
+}
+
+/**
+ * 保留清单（`startNextCycle` 原样带着走）。
+ *
+ * `ngPlus` 里的 `cycle` 是唯一会**变**的（+1），其余三个数组原样保留。
+ * 顶部标题已经写明「第 N 周目」，所以 `cycle` 不单列一条。
+ */
+export const NEXT_CYCLE_KEPT: readonly NextCycleBullet[] = Object.freeze([
+  Object.freeze({
+    fields: Object.freeze(['ngPlus'] as const),
+    countOf: 'endings' as const,
+    text: '已解锁的结局',
+  }),
+  Object.freeze({
+    fields: Object.freeze(['ngPlus'] as const),
+    countOf: 'readLogs' as const,
+    text: '读过的前任记录',
+  }),
+  Object.freeze({
+    fields: Object.freeze(['ngPlus'] as const),
+    countOf: 'branchesHistory' as const,
+    text: '走过的支线',
+  }),
+  Object.freeze({
+    fields: Object.freeze(['keepsakes'] as const),
+    countOf: 'keepsakes' as const,
+    text: '纪念品',
+  }),
+]);
+
+/**
+ * 重置清单（`startNextCycle` 清零 / 归位）。
+ *
+ * ⚠️ 措辞要能让玩家明白**后果**，不只是列字段名。
+ * 例如 `crafts` 那条必须点明「读那几篇记录要重新攒次数」——
+ * 玩家看到「累计合成次数」不知道这跟读日志有关，看到那句才知道。
+ */
+export const NEXT_CYCLE_RESET: readonly NextCycleBullet[] = Object.freeze([
+  Object.freeze({
+    fields: Object.freeze(['bag', 'discovered', 'day', 'areaId', 'scene'] as const),
+    text: '背包、地面上捡到过的东西、天数（回到坠毁点的第 1 天）',
+  }),
+  Object.freeze({
+    fields: Object.freeze(['stage', 'stepIndex', 'buildDone'] as const),
+    text: '阶段进度（回到第一个阶段的第 1 步）',
+  }),
+  Object.freeze({
+    fields: Object.freeze(['branches'] as const),
+    text: '已完成的支线',
+  }),
+  Object.freeze({
+    fields: Object.freeze(['crafts'] as const),
+    text: '累计合成次数（读那几篇记录要重新攒次数）',
+  }),
+  Object.freeze({
+    fields: Object.freeze(['logsFound'] as const),
+    text: '本周目拿到的记录载体（要重新做一遍）',
+  }),
+  Object.freeze({
+    fields: Object.freeze(['accidents', 'log'] as const),
+    text: '意外次数与这一周的世界日志',
+  }),
+  Object.freeze({
+    fields: Object.freeze(['ending'] as const),
+    text: '本周目的结局（结局本身已经记在「已解锁的结局」里）',
+  }),
+  Object.freeze({
+    fields: Object.freeze(['launchAttempts', 'launchFailures'] as const),
+    text: '起飞尝试与失败的次数',
+  }),
+]);
+
+/**
  * 开新周目（二周目）。
  *
  * GDD §7.1：
@@ -178,6 +282,10 @@ export function recordBranch(np: NgPlusState, branchId: BranchId): NgPlusState {
  *   `buildDone`(=false)（阶段 3 三步走满是世界进度，重做）。
  *
  * 「世界进度全部清零，只留下『你知道的东西』和『你拿到过的东西』」。
+ *
+ * ⚠️ 改这个函数时**必须同步 `NEXT_CYCLE_KEPT` / `NEXT_CYCLE_RESET`** ——
+ * 确认页给玩家看的清单就是从这里来的，漏一条就等于没告诉玩家你会失去什么。
+ * `ngplus.test.ts` 里有断言守着（少字段就红）。
  */
 export function startNextCycle(state: SaveState): SaveState {
   const np: NgPlusState = {

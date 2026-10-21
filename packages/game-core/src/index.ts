@@ -84,6 +84,8 @@ export {
 export {
   BRANCH_IDS,
   ENDING_IDS,
+  NEXT_CYCLE_KEPT,
+  NEXT_CYCLE_RESET,
   continueAfterEnding,
   createNgPlus,
   isBranchId,
@@ -94,6 +96,7 @@ export {
   recordEnding,
   recordReadLog,
   startNextCycle,
+  type NextCycleBullet,
 } from './ngplus';
 export {
   CARRIER_TO_LOG,

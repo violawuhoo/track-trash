@@ -394,21 +394,66 @@ describe('F. G2 配对示例（阶段 1）', () => {
   });
 
   /**
-   * F5（2026 复审补）：文案是**标签方向提示**，不是配方步骤。
+   * F5（2026 复审补 · 2026-10-22 文案定稿）：文案是**标签方向提示**，不是配方步骤。
    *
    * 口径：文案必须点名这一步要的标签，并给出「同一类里换别的也行」的余地，
    * 不得出现「照着做一定能过」这种对材料可得性的强承诺。
+   *
+   * 2026-10-22 文策渊定稿后的句式要求（**逐字断言**）：
+   * - 标签在前、例子在后：`这一步要「<标签>」和「<标签>」——比如<物品>（<标签>）配<物品>（<标签>）。`
+   * - 尾巴固定：`带这两个标签的都行，不一定是这两样。`
    */
-  it('F5 文案给出标签方向而不是配方步骤', () => {
+  it('F5 文案给出标签方向而不是配方步骤（句式定稿）', () => {
     for (let i = 0; i < 3; i++) {
       const ex = pairingExample(1, i)!;
       const req = STAGES[0].steps[i]!.requires;
       for (const t of req) {
         expect(ex.text, `s1-${i + 1} 文案没提标签「${t}」`).toContain(t);
       }
-      expect(ex.text).toContain('换别的也行');
+      // 尾巴固定句（定稿）
+      expect(ex.text).toContain('带这两个标签的都行，不一定是这两样。');
+      // 标签在前、例子在后：标签句必须在例子（物品名）之前
+      expect(ex.text.indexOf('这一步要「')).toBeLessThan(ex.text.indexOf('比如'));
+      // 不得出现对材料可得性的强承诺
       expect(ex.text).not.toContain('一定能过');
     }
+  });
+
+  /**
+   * F6（2026-10-22 定稿）：三步示例的**逐字文案**。
+   *
+   * 定稿三句是逐字定下来的，任何改动都要在这里红。
+   */
+  it('F6 三步示例文案逐字等于定稿', () => {
+    expect(pairingExample(1, 0)!.text).toBe(
+      '这一步要「导电」和「粘」——比如漏气电池（导电）配胶带（粘）。带这两个标签的都行，不一定是这两样。',
+    );
+    expect(pairingExample(1, 1)!.text).toBe(
+      '这一步要「导电」和「金属」——比如生锈扳手（导电）配撬棍（金属）。带这两个标签的都行，不一定是这两样。',
+    );
+    expect(pairingExample(1, 2)!.text).toBe(
+      '这一步要「知识」和「导电」——比如缺页火箭手册（知识）配漏气电池（导电）。带这两个标签的都行，不一定是这两样。',
+    );
+  });
+
+  /**
+   * F7（2026-10-22 定稿）：s1-2 的示例是 `wrench` + `crowbar`。
+   *
+   * 理由：`battery` 已经在 s1-1 与 s1-3 出现（首尾，跨度最大），
+   * 若 s1-2 也指向它，玩家在 s1-1 把电池用掉后（`craft()` 扣材料），
+   * s1-2 的例子就指向了一件手上已经没有的东西。
+   * 换成 `wrench` 后：`battery` 在 s1-1 / s1-3，`wrench` 独占 s1-2。
+   */
+  it('F7 s1-2 的示例是 wrench + crowbar（battery 不在 s1-2）', () => {
+    const ex = pairingExample(1, 1)!;
+    expect(ex.a).toBe('wrench');
+    expect(ex.b).toBe('crowbar');
+    expect(ex.a).not.toBe('battery');
+    expect(ex.b).not.toBe('battery');
+    // wrench 与 crowbar 都在坠毁点池里且是 base
+    expect(AREA_POOLS.crash).toContain('wrench');
+    expect(getItem('wrench')!.kind).toBe('base');
+    expect(getItem('crowbar')!.kind).toBe('base');
   });
 });
 

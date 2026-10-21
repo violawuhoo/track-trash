@@ -18,7 +18,7 @@
 | A5 | 内容校验（80 物品 / 36 配方，无孤立物品、每标签 ≥2 来源） | `node scripts/check-content.mjs` | ✅ 全部通过 |
 | A6 | 资产校验（80 件物品形状齐全、互不撞脸、色值同源） | `node scripts/check-assets.mjs` | ✅ 全部通过 |
 | A7 | api 测试 | `pnpm --filter @haola/api test` | ✅ 9/9 |
-| A8 | 生产构建性能门（Lighthouse + 帧率，T10-R2 定稿） | LH 移动端 Performance **98**（FCP 1.77s / LCP 2.04s / TBT 53ms / CLS 0，412×823@1.75 + 模拟 4× CPU + 1.6Mbps）；首屏 JS gzip **158.6KB**（JS 154.2 + CSS 4.4）；CPU 4× 降速连续移动 60.87s 均 **59.6fps**（3629 帧）/ 掉帧 **0.4%**（15 帧 >33.3ms，0 帧 >100ms，最差帧 66.7ms）/ 主线程 35.2% / 场景长任务 3 个（63/80/50ms）；冷启动本机 4× FCP 912ms | ✅ **PASS**（阈值：LH ≥85 ✅、JS gz <250KB ✅、60fps 贴线 ✅、首屏 <2s ✅）。数据源：`docs/perf/PERF-REPORT-v2.md`（T10-R2 已定稿，prod4x-clean 轮）。遗留已定位优化：拾取瞬间背包全量重渲染触发整文档重排（trace 有证，下轮修）。**真机未测 = 残余风险**（4× 为 CPU 模拟，GL 走桌面 ANGLE/D3D11，真机 GPU/触屏/调度未覆盖），列发布后观察。口径固定为「生产构建 + 4× 降速」 |
+| A8 | 生产构建性能门（Lighthouse + 帧率，T10-R2 定稿） | LH 移动端 Performance **98**（FCP 1.77s / LCP 2.04s / TBT 53ms / CLS 0，412×823@1.75 + 模拟 4× CPU + 1.6Mbps）；首屏 JS gzip **158.6KB**（JS 154.2 + CSS 4.4，实际文件 gzip 实测；全量 JS gzip 232.1KB / 含 CSS 236.5KB）；CPU 4× 降速连续移动 60.87s 均 **59.6fps**（3629 帧）/ 掉帧 **0.4%**（15 帧 >33.3ms，0 帧 >100ms，最差帧 66.7ms）/ 主线程 35.2% / 场景长任务 3 个（63/80/50ms）；冷启动本机 4× FCP 912ms | ✅ **PASS**（阈值：LH ≥85 ✅、JS gz <250KB ✅、60fps 贴线 ✅、首屏 <2s ✅）。数据源：`docs/perf/PERF-REPORT-v2.md`（T10-R2 已定稿，prod4x-clean 轮）。遗留已定位优化：拾取瞬间背包全量重渲染触发整文档重排（trace 有证，下轮修）。**真机未测 = 残余风险**（4× 为 CPU 模拟，GL 走桌面 ANGLE/D3D11，真机 GPU/触屏/调度未覆盖），列发布后观察。口径固定为「生产构建 + 4× 降速」 |
 
 > ⚠️ 本地沙箱注意：本机跑 `game-core test` 会因 `EPERM` 静默丢 `world.test.ts`（只收 4 文件 / 39 用例，退出码仍可能为 0 或 1）。**验收以 CI 为准**，本机数字不得作为发布依据（`docs/TASKS-v2.md` §0.5 坑 #2）。
 

@@ -36,6 +36,10 @@ export const SaveStateSchema = z
     tutorial: z
       .object({ step: z.string(), picks: z.number() })
       .optional(),
+    // C1 批次：累计合成次数 + 已获得的前任日志 id 集合。
+    // 可选：老存档没有这两个键，别让老档传不上去。
+    crafts: z.number().optional(),
+    logsFound: z.array(z.string()).optional(),
   })
   .passthrough();
 

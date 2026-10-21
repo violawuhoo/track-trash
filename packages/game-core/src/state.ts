@@ -1,6 +1,7 @@
 import { ITEM_MAP, getItem } from './items';
 import { ENDING_LINES, lines, missingLine, type DialogueKey } from './dialogue';
 import { launchCheck, rollLaunch, allBranchStatus } from './launch';
+import { CARRIER_TO_LOG } from './logs';
 import { resolveMix } from './resolve';
 import { pickSearchWithHints } from './search';
 import { AREAS, BRANCHES, STAGE_KEEPSAKES } from './stages';
@@ -29,6 +30,8 @@ export function createInitialState(): SaveState {
     stepIndex: 0,
     buildDone: false,
     ngPlus: false,
+    crafts: 0,
+    logsFound: [],
     branches: { ship: false, teashop: false, birthday: false, stay: false },
     keepsakes: [],
     accidents: 0,
@@ -202,7 +205,18 @@ export function craft(
     ...state,
     bag: addItem(bag, output.id),
     day: state.day + 1,
+    // 累计合成次数。GDD §6.2 的 L1 / L5 解锁条件挂在「合成次数 ≥ N」上，
+    // 所以每一次成功的合成都要计数（含阶段目标命中与意外产物 —— 它们同样是「合成了一次」）。
+    crafts: state.crafts + 1,
   };
+
+  // 前任日志载体记账（C1 批次）。
+  // 载体是普通合成产物，可以被消耗、可以重复合出 —— 所以记的是**日志 id 集合**，
+  // 合出一次就记上，物品后来被用掉了也不收回（读过就记得）。
+  const logId = CARRIER_TO_LOG[output.id];
+  if (logId && !next.logsFound.includes(logId)) {
+    next = { ...next, logsFound: [...next.logsFound, logId] };
+  }
 
   let dialogueKey: DialogueKey | null = null;
   let ending: EndingId | undefined;

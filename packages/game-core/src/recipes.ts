@@ -74,8 +74,14 @@ export const RECIPES: Recipe[] = [
   { a: 'debt', b: 'photo', out: 'landdeed' },
   { a: 'awkward', b: 'mirror', out: 'neighbor' },
   { a: 'bedframe', b: 'tape', out: 'warmchair' },
-  // 第 3 层：前任日志载体（mid + base）。
+  // 第 3 层：前任日志载体（GDD §5.3 R16–R23，8 条）。
+  // 载体 ↔ 日志的映射见 `logs.ts` 的表；每条配方都要能走通（依赖闭包终止于可捡 base）。
+  { a: 'manual', b: 'photo', out: 'log_page1' },
+  { a: 'lamp', b: 'lottery', out: 'log_map2' },
+  { a: 'manual', b: 'broom', out: 'log_page2' },
+  { a: 'manual', b: 'mirror', out: 'log_map1' },
   { a: 'homework', b: 'switchpanel', out: 'log_chip1' },
+  { a: 'hourglass', b: 'poker', out: 'log_q1' },
   { a: 'warnlamp', b: 'crystal', out: 'log_b1' },
   { a: 'generator', b: 'note', out: 'log_reel1' },
 ];

@@ -167,6 +167,24 @@ export interface SaveState {
    * 「cycle ≥ 2 的空档案」来归一化 —— 迁移点记在 C2 的任务书里。
    */
   ngPlus: boolean;
+  /**
+   * 累计合成次数（C1 批次）。
+   *
+   * GDD §6.2 的 L1 / L5 解锁条件用「合成次数」当条件之一，
+   * 所以这个计数必须落进存档 —— 它不是能从别处推出来的派生值。
+   *
+   * 不 bump schemaVersion：按 T7 `tutorial` / A1a `buildDone` / A2 `ngPlus` 先例，
+   * 读档时归一化（老存档缺字段 → 0）。
+   */
+  crafts: number;
+  /**
+   * 已获得的前任日志 id 集合（C1 批次）。
+   *
+   * 载体是普通合成产物，可以被消耗、可以重复合出 —— 所以这里存**集合**而不是数量：
+   * 合出一次就记上，物品被用掉了也不收回（读过就记得）。
+   * 归一化：老存档缺字段 → 空数组。
+   */
+  logsFound: string[];
   branches: Record<BranchId, boolean>;
   keepsakes: string[];
   accidents: number;

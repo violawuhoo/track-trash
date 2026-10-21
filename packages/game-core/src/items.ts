@@ -127,8 +127,15 @@ export const ITEMS: Item[] = [
   { id: 'complexmood', name: '复杂的情绪', desc: '同时觉得还好和不太行。两种感觉互相抵消，剩下困。', tags: ['意外', '抽象'], kind: 'accident', color: 'yellow', icon: 'wave' },
   { id: 'gambler', name: '赌徒的乐观', desc: '你确信下一把能赢。这个信念本身不产生任何东西，但它很亮。', tags: ['意外', '风险', '抽象'], kind: 'accident', color: 'orange', icon: 'dice' },
   { id: 'dud', name: '哑炮', desc: '两个都很想炸的东西凑齐了，互相抵消，只剩礼貌。安静得像从没被组装过。', tags: ['意外', '实体'], kind: 'accident', color: 'orange', icon: 'blob2' },
-  // 前任日志载体（GDD §4.4）。本批落 3 件（其余 5 件随 C1 日志面板一起落）。
+  // 前任日志载体（GDD §4.4）。8 件全落，配方见 recipes.ts R16–R23。
+  // kind 复用 `accident`：不新增 kind 枚举（硬约束），语义上「前任留下的旧物」与意外产物同族。
+  // 正文在 `logs.ts`（独立日志面板），这里只放钩子 desc。
+  { id: 'log_page1', name: '缺页手稿', desc: '一份操作手册的续页，字很小。缺失的部分正好在最要紧的地方。', tags: ['意外', '知识'], kind: 'accident', color: 'orange', icon: 'page' },
+  { id: 'log_map2', name: '燃料清单', desc: '手写的燃料消耗表。最后一栏写着「留给下一个」。', tags: ['意外', '风险', '抽象'], kind: 'accident', color: 'yellow', icon: 'map' },
+  { id: 'log_page2', name: '值班记录', desc: '一个人值班一天的记录。字迹越到后面越工整。', tags: ['意外', '知识', '抽象'], kind: 'accident', color: 'purple', icon: 'page' },
+  { id: 'log_map1', name: '航路草图', desc: '画的是来时的路。最后一段被反复描过，纸都破了。', tags: ['意外', '知识', '实体'], kind: 'accident', color: 'pink', icon: 'map' },
   { id: 'log_chip1', name: '存储芯片', desc: '一小块存着很多东西的电路。断电前它一直在写，写到一半停了。', tags: ['意外', '知识', '风险'], kind: 'accident', color: 'yellow', icon: 'chip' },
+  { id: 'log_q1', name: '未完的问句', desc: '纸上只有一个问句，后面留着半页空白。空白不是没答案，是没敢写。', tags: ['意外', '抽象'], kind: 'accident', color: 'pink', icon: 'question' },
   { id: 'log_b1', name: '前任遗物', desc: '一个说不出是什么的物件。它一直在发热，别的都凉了。', tags: ['意外', '实体', '外星'], kind: 'accident', color: 'mint', icon: 'blob2' },
   { id: 'log_reel1', name: '数据卷盘', desc: '前任留下的存储介质。转起来有声音，像有人在很远的地方翻身。', tags: ['意外', '外星', '知识'], kind: 'accident', color: 'purple', icon: 'reel' },
 

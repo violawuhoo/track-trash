@@ -68,6 +68,18 @@ export {
   type LaunchMode,
 } from './launch';
 export {
+  CARRIER_TO_LOG,
+  LOG_BY_ID,
+  LOGS,
+  carrierFound,
+  logUnlocked,
+  pendingLogs,
+  readableLogs,
+  waitingLogs,
+  type LogDoc,
+  type LogProgress,
+} from './logs';
+export {
   DIALOGUE,
   ENDING_LINES,
   lines,

@@ -10,7 +10,7 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "test": "node ../../scripts/run-tests.mjs --min-tests 150 --min-files 10",
+    "test": "node ../../scripts/run-tests.mjs --min-tests 155 --min-files 10",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },

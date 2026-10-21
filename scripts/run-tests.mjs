@@ -32,17 +32,30 @@
  * 2. **兜底重试**：即便仍有 EPERM，自动重跑（默认 2 次），
  *    并把每次尝试都打出来 —— 不让环境问题变成「静默少跑」。
  *
- * ## 问题 2：用例数守恒断言
+ * ## 问题 2：用例数守恒断言（基线取自 `scripts/test-baseline.json`）
  *
  * 上面那种「文件整个没跑」的情况，靠人眼发现太难。所以本脚本**在 vitest 跑完后
  * 解析机器可读的报告**，断言：
- * - 收集到的测试文件数 ≥ `--min-files`（少一个文件就红）
- * - 通过的用例数 ≥ `--min-tests`（少一条就红）
+ * - 收集到的测试文件数 ≥ 基线文件数（少一个文件就红）
+ * - 通过的用例数 ≥ 基线用例数（少一条就红）
  *
  * 任一不满足 → **exit≠0**，CI 立刻红。
- * ⚠️ 阈值必须按各包**实际**用例数设（本轮按 `apps/api` 25 例 / 2 文件、
- * `packages/game-core` 155 例 / 10 文件），既不能写死成会误报的数，
- * 也不能写松到漏掉「少跑一个文件」。
+ *
+ * ### 为什么用基线文件，而不是把数字写死成命令行参数
+ *
+ * 写死的阈值两头都会出错：
+ * - **有人加用例** → 阈值偏低 → 少跑一个文件也可能还 ≥ 阈值 → **漏报**（悄悄放过）；
+ * - **有人删用例** → 阈值偏高 → 一切正常也报红 → **误报**。
+ *
+ * 所以基线放在 `scripts/test-baseline.json`（按包名索引），并且：
+ * - 实测数 **低于** 基线 → 红（少跑 / 少用例），需要人工确认后才更新基线；
+ * - 实测数 **高于** 基线 → 脚本**自动更新基线文件**并提示「请提交」——
+ *   加用例不再需要手动改数字，也不会因为忘记改而漏报。
+ *
+ * 这样「加用例」零维护、「删用例」会被拦下确认。
+ *
+ * ⚠️ `--min-tests` / `--min-files` 仍可传，但它们只是**下限**，
+ * 不会覆盖基线（`max(参数, 基线)`）—— 防止有人传一个松的数把守恒断言架空。
  *
  * ## 用法
  *
@@ -51,20 +64,25 @@
  * ```
  *
  * 参数：
- * - `--min-tests <n>`  最少通过的用例数（默认 1）
- * - `--min-files <n>`  最少收集到的测试文件数（默认 1）
+ * - `--min-tests <n>`  最少通过的用例数下限（默认 1；实际阈值取 max(参数, 基线)）
+ * - `--min-files <n>`  最少收集到的测试文件数下限（默认 1；同上）
  * - `--retries <n>`    EPERM 时的自动重跑次数（默认 2）
+ * - `--no-update-baseline`  不自动更新基线文件（CI 里不想改工作区时用）
  *
  * 退出码：0 = 全绿；1 = 守恒断言不达标 / vitest 失败；2 = 参数错。
  */
 import { spawn } from 'node:child_process';
-import { existsSync, mkdirSync, readFileSync, rmSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(HERE, '..');
 const PKG_ROOT = process.cwd();
+
+/** 本包在仓库里的相对路径，用作基线文件的键 */
+const PKG_KEY = relative(REPO_ROOT, PKG_ROOT).split(/[\\/]/).join('/');
+const BASELINE_FILE = join(HERE, 'test-baseline.json');
 
 /** ── 参数解析 ── */
 const argv = process.argv.slice(2);
@@ -78,9 +96,49 @@ function numArg(name, dflt) {
   }
   return v;
 }
-const MIN_TESTS = numArg('--min-tests', 1);
-const MIN_FILES = numArg('--min-files', 1);
+const ARG_MIN_TESTS = numArg('--min-tests', 1);
+const ARG_MIN_FILES = numArg('--min-files', 1);
 const RETRIES = numArg('--retries', 2);
+const UPDATE_BASELINE = !argv.includes('--no-update-baseline');
+
+/**
+ * 基线文件：`{ "<包相对路径>": { files: n, tests: n, note?: string } }`。
+ *
+ * 读不到 / 没有本包的条目 → 不静默放过，而是**明确报错**：
+ * 一个没有基线的包等于没有守恒断言，这比报错危险。
+ */
+function loadBaseline() {
+  if (!existsSync(BASELINE_FILE)) {
+    console.error(`[run-tests] 找不到基线文件 ${BASELINE_FILE}`);
+    console.error('[run-tests] 守恒断言需要基线才能工作（否则少跑用例会被静默放过）。');
+    process.exit(2);
+  }
+  let raw;
+  try {
+    raw = JSON.parse(readFileSync(BASELINE_FILE, 'utf-8'));
+  } catch (e) {
+    console.error(`[run-tests] 基线文件解析失败：${e.message}`);
+    process.exit(2);
+  }
+  const entry = raw[PKG_KEY];
+  if (!entry) {
+    console.error(`[run-tests] 基线文件里没有「${PKG_KEY}」这一项。`);
+    console.error('[run-tests] 请在 scripts/test-baseline.json 里补上本包的 files / tests。');
+    process.exit(2);
+  }
+  return { all: raw, entry, key: PKG_KEY };
+}
+
+const BASELINE = loadBaseline();
+
+/**
+ * 实际阈值 = max(命令行下限, 基线)。
+ *
+ * 取 max 而不是「基线优先」：这样**传一个更松的数也架不空守恒断言**，
+ * 而传一个更严的数（临时想卡更死）仍然生效。
+ */
+const MIN_TESTS = Math.max(ARG_MIN_TESTS, BASELINE.entry.tests ?? 0);
+const MIN_FILES = Math.max(ARG_MIN_FILES, BASELINE.entry.files ?? 0);
 
 /** ── 临时目录：仓库内固定路径，避开宿主 %TEMP% 的写入限制 ── */
 const TMP_ROOT = join(REPO_ROOT, '.tmp', 'vitest-tmp');
@@ -121,7 +179,8 @@ const args = [
 
 console.log(
   `[run-tests] ${useLocal ? 'local' : 'npx'} vitest run（串行，避免沙箱并发写 SSR 缓存被拒）` +
-    `  (TMP → ${TMP_ROOT})  守恒断言：用例 ≥ ${MIN_TESTS}，文件 ≥ ${MIN_FILES}，EPERM 重试 ≤ ${RETRIES}`,
+    `  (TMP → ${TMP_ROOT})  守恒断言：用例 ≥ ${MIN_TESTS}，文件 ≥ ${MIN_FILES}` +
+    `（基线 ${BASELINE.key}），EPERM 重试 ≤ ${RETRIES}`,
 );
 
 /** 跑一次 vitest，返回 { code, output }。 */
@@ -189,6 +248,48 @@ function checkConservation(report) {
 }
 
 /**
+ * 实测数**高于**基线 → 自动更新基线文件并提示提交。
+ *
+ * 目的：让「加用例」零维护 —— 不用手改数字，也不会因为忘记改而漏报。
+ * 反方向（实测低于基线）**不自动改**，而是红并要求人工确认 ——
+ * 删用例往往意味着「测试文件整个没跑」，那是要报警的，不是要默默接受的。
+ *
+ * @returns {boolean} 是否发生了更新
+ */
+function updateBaseline(report) {
+  if (!UPDATE_BASELINE) return false;
+  const numFiles = report?.testResults?.length ?? 0;
+  const numPassed = report?.numPassedTests ?? 0;
+  const baseFiles = BASELINE.entry.files ?? 0;
+  const baseTests = BASELINE.entry.tests ?? 0;
+  if (numFiles <= baseFiles && numPassed <= baseTests) return false;
+
+  BASELINE.entry.files = numFiles;
+  BASELINE.entry.tests = numPassed;
+  // 保留原有字段顺序（files → tests → note），note 用默认文案补齐。
+  const ordered = {};
+  for (const [k, v] of Object.entries(BASELINE.all)) {
+    if (k !== BASELINE.key) {
+      ordered[k] = v;
+      continue;
+    }
+    ordered[k] = {
+      files: v.files ?? 0,
+      tests: v.tests ?? 0,
+      note:
+        v.note ??
+        '基线。新增用例后脚本会自动更新并提示提交；用例数减少则守恒断言报错（需人工确认后更新本文件）。',
+    };
+  }
+  writeFileSync(BASELINE_FILE, `${JSON.stringify(ordered, null, 2)}\n`, 'utf-8');
+  console.log(
+    `[run-tests] 📈 基线已更新（${BASELINE.key}: files ${baseFiles}→${numFiles}, tests ${baseTests}→${numPassed}）` +
+      ' —— 请把 scripts/test-baseline.json 一起提交。',
+  );
+  return true;
+}
+
+/**
  * 判断这次失败是否**由沙箱的 EPERM 引起**（可重试的环境问题）。
  *
  * 判据：vitest 退出码非 0，**且**报告里有用例数不达标（文件整个没跑），
@@ -218,6 +319,7 @@ async function main() {
 
     if (lastProblems.length === 0) {
       console.log('[run-tests] ✅ 守恒断言通过');
+      updateBaseline(report);
       try {
         rmSync(REPORT_FILE, { force: true });
       } catch {
@@ -239,9 +341,10 @@ async function main() {
   console.error('\n[run-tests] ❌ 守恒断言不通过：');
   for (const p of lastProblems) console.error(`  - ${p}`);
   console.error(
-    '[run-tests] 提示：这通常是 Windows 沙箱下 vitest 写 SSR 临时文件被拒（EPERM）' +
-      '导致的「文件整个没跑」。本脚本已串行跑并自动重试；若仍出现，' +
-      '请检查是否有别的进程占着临时目录。',
+    '[run-tests] 提示：这通常是 Windows 沙箱下 **并发写** vitest 的 SSR 临时缓存被拒' +
+      '（EPERM）导致的「文件整个没跑」。本脚本已用 --no-file-parallelism 串行跑并自动重试；' +
+      '若仍出现，请检查宿主沙箱的文件代理（node-brokered-fs-shim）是否仍在拦截写入，' +
+      '而不是「有没有别的进程占着临时目录」。',
   );
   try {
     rmSync(REPORT_FILE, { force: true });

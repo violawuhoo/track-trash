@@ -33,7 +33,7 @@
 | B1 | GitHub Pages 站点已创建（Source = **GitHub Actions**） | 🔴 **未启用**。`GET /repos/violawuhoo/track-trash/pages` → 404；线上 `https://violawuhoo.github.io/track-trash/` → 404 "Site not found" |
 | B2 | 手动启用步骤已执行：仓库页 **Settings → Pages → Build and deployment → Source: GitHub Actions → Save** | ⬜ 待用户操作 |
 | B3 | 启用后 Deploy Web 全链路绿 | ⬜ 待验证 |
-| B4 | 部署产物唯一来源 = CI | `deploy-web.yml` 的 Build web step 硬编码 `VITE_BASE: /track-trash/`，Actions 产物 base 正确，是唯一合法部署源。**本地 `apps/web/dist` 与 `apps/web/dist-perf/` 均不是部署源**：本地 dist 刚被发现于 12:02 被外部重建为无 base 前缀版本（`index-IwNPd2WD.js`，`src="/assets/..."`，已作废，**勿手动部署**）；`dist-perf/` 为测量专用构建，同样不用于发布 |
+| B4 | 部署产物唯一来源 = CI | `deploy-web.yml` 的 Build web step 硬编码 `VITE_BASE: /track-trash/`，且 `apps/web/vite.config.ts` 构建默认 base 同为 `/track-trash/`（env 丢失也不丢 base，双保险），Actions 产物是唯一合法部署源。**本地 `apps/web/dist` 与 `apps/web/dist-perf/` 均不是部署源**：本地 dist 刚被发现于 12:02 被外部重建为无 base 前缀版本（`index-IwNPd2WD.js`，`src="/assets/..."`，已作废，**勿手动部署**）；`dist-perf/` 为测量专用构建，同样不用于发布 |
 
 **为什么 workflow 修不好自己**：`deploy-web.yml` 里 `configure-pages@v5` 带了 `enablement: true`，本意是「Pages 没开就自动创建」。实测（run `39535863980`，step 8）它先 `GET /pages` 得到 Not Found，再 `POST /pages` 创建时被 GitHub 拒绝：
 
@@ -51,7 +51,7 @@
 
 | # | 检查项 | 方法 | 通过标准 |
 |---|---|---|---|
-| C0 | 线上产物 base 校验（防白屏，政策见 B4） | 部署完成后查看线上 `index.html` 源码 | 资源引用必须是 `/track-trash/assets/...`；若为 `/assets/...` 说明误部署了无 base 的本地产物，立即按 G 组回滚重部署 |
+| C0 | 线上产物 base 校验（防白屏，政策见 B4） | 部署完成后查看线上 `index.html` 源码 | 资源引用必须是 `/track-trash/assets/...`；若为 `/assets/...` 立即按 G 组回滚重部署。判识规则：`vite.config.ts` 构建默认 base 即 `/track-trash/`，任何本地产物若引用 `/assets/...`，必为显式 `VITE_BASE=/` 的构建（本地测量或自定义域名场景），对本仓库 Pages 部署即为误部署 |
 | C1 | 启用 Pages 后触发一次部署 | Actions 页手动 **Re-run jobs** 任一失败的 Deploy Web run（如 `39535863980`），或 push 任意触发 `apps/web/**` 的 commit | build + deploy 两 job 全绿 |
 | C2 | 首页可访问 | 浏览器开 `https://violawuhoo.github.io/track-trash/` | 200，出现开始页，不再是 404 |
 | C3 | 刷新不 404 | 在游戏界面按 F5 / 手机端下拉刷新 | 仍返回 200（SPA 单入口，无子路由） |

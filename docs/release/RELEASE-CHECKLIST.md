@@ -20,7 +20,7 @@
 | A5 | 内容校验（80 物品 / 36 配方，无孤立物品、每标签 ≥2 来源） | `node scripts/check-content.mjs` | ✅ 全部通过 |
 | A6 | 资产校验（80 件物品形状齐全、互不撞脸、色值同源） | `node scripts/check-assets.mjs` | ✅ 全部通过 |
 | A7 | api 测试 | `pnpm --filter @haola/api test` | ✅ 9/9 |
-| A8 | 生产构建性能门（Lighthouse + 帧率，T10-R2 定稿） | LH 移动端 Performance **98**（FCP 1.77s / LCP 2.04s / TBT 53ms / CLS 0，412×823@1.75 + 模拟 4× CPU + 1.6Mbps）；首屏 JS gzip **158.6KB**（JS 154.2 + CSS 4.4，实际文件 gzip 实测；全量 JS gzip 232.1KB / 含 CSS 236.5KB）；CPU 4× 降速连续移动 60.87s 均 **59.6fps**（3629 帧）/ 掉帧 **0.4%**（15 帧 >33.3ms，0 帧 >100ms，最差帧 66.7ms）/ 主线程 35.2% / 场景长任务 3 个（63/80/50ms）；冷启动本机 4× FCP 912ms | ✅ **PASS**（阈值：LH ≥85 ✅、JS gz <250KB ✅、60fps 贴线 ✅、首屏 <2s ✅）。数据源：`docs/perf/PERF-REPORT-v2.md`（T10-R2 已定稿，prod4x-clean 轮）。遗留已定位优化：拾取瞬间背包全量重渲染触发整文档重排（trace 有证，下轮修）。**真机未测 = 残余风险**（4× 为 CPU 模拟，GL 走桌面 ANGLE/D3D11，真机 GPU/触屏/调度未覆盖），列发布后观察。口径固定为「生产构建 + 4× 降速」 |
+| A8 | 生产构建性能门（Lighthouse + 帧率，T10-R2 定稿） | LH 移动端 Performance **98**（FCP 1.77s / LCP 2.04s / TBT 53ms / CLS 0，412×823@1.75 + 模拟 4× CPU + 1.6Mbps）；首屏 JS gzip **158.6KB**（JS 154.2 + CSS 4.4，实际文件 gzip 实测；全量 JS gzip 232.1KB / 含 CSS 236.5KB）；CPU 4× 降速连续移动 60.87s 均 **59.6fps**（3629 帧）/ 掉帧 **0.4%**（15 帧 >33.3ms，0 帧 >100ms，最差帧 66.7ms）/ 主线程 35.2% / 场景长任务 3 个（63/80/50ms）；冷启动本机 4× FCP 912ms | ✅ **PASS**（阈值：LH ≥85 ✅、JS gz <250KB ✅、60fps 贴线 ✅、首屏 <2s ✅）。数据源：`docs/perf/PERF-REPORT-v2.md`（T10-R2 已定稿，prod4x-clean 轮）。遗留已定位优化：拾取瞬间背包全量重渲染触发整文档重排（trace 有证，QW1 修复中——commit 与严守真验收通过前，A8 不并入 QW 收益数字，避免与验收结论打架）。**真机未测 = 残余风险**（4× 为 CPU 模拟，GL 走桌面 ANGLE/D3D11，真机 GPU/触屏/调度未覆盖），列发布后观察。口径固定为「生产构建 + 4× 降速」 |
 
 > ⚠️ 本地沙箱注意：本机跑 `game-core test` 会因 `EPERM` 静默丢 `world.test.ts`（只收 4 文件 / 39 用例，退出码仍可能为 0 或 1）。**验收以 CI 为准**，本机数字不得作为发布依据（`docs/TASKS-v2.md` §0.5 坑 #2）。
 
@@ -35,7 +35,7 @@
 | B1 | GitHub Pages 站点已创建（Source = **GitHub Actions**） | 🔴 **未启用**。`GET /repos/violawuhoo/track-trash/pages` → 404；线上 `https://violawuhoo.github.io/track-trash/` → 404 "Site not found" |
 | B2 | 手动启用步骤已执行：仓库页 **Settings → Pages → Build and deployment → Source: GitHub Actions → Save** | ⬜ 待用户操作 |
 | B3 | 启用后 Deploy Web 全链路绿 | ⬜ 待验证 |
-| B4 | 部署产物唯一来源 = CI | `deploy-web.yml` 的 Build web step 硬编码 `VITE_BASE: /track-trash/`，且 `apps/web/vite.config.ts` 构建默认 base 同为 `/track-trash/`（env 丢失也不丢 base，双保险），Actions 产物是唯一合法部署源。**本地 `apps/web/dist` 与 `apps/web/dist-perf/` 均不是部署源**：本地 dist 刚被发现于 12:02 被外部重建为无 base 前缀版本（`index-IwNPd2WD.js`，`src="/assets/..."`，已作废，**勿手动部署**）；`dist-perf/` 为测量专用构建，同样不用于发布 |
+| B4 | 部署产物唯一来源 = CI | `deploy-web.yml` 的 Build web step 硬编码 `VITE_BASE: /track-trash/`，且 `apps/web/vite.config.ts` 构建默认 base 同为 `/track-trash/`（env 丢失也不丢 base，双保险），Actions 产物是唯一合法部署源。**本地 `apps/web/dist` 与 `apps/web/dist-perf/` 均不是部署源**：本地 dist 刚被发现于 12:02 被外部重建为无 base 前缀版本（`index-IwNPd2WD.js`，`src="/assets/..."`，已作废，**勿手动部署**）；`dist-perf/` 为测量专用构建，同样不用于发布。本地产构建仅限本地预览，且须用 PowerShell 或 `MSYS2_ARG_CONV_EXCL='*'` 规避 MSYS 路径转换（判识见 C0） |
 
 **为什么 workflow 修不好自己**：`deploy-web.yml` 里 `configure-pages@v5` 带了 `enablement: true`，本意是「Pages 没开就自动创建」。实测（run `39535863980`，step 8）它先 `GET /pages` 得到 Not Found，再 `POST /pages` 创建时被 GitHub 拒绝：
 
@@ -53,7 +53,7 @@
 
 | # | 检查项 | 方法 | 通过标准 |
 |---|---|---|---|
-| C0 | 线上产物 base 校验（防白屏，政策见 B4） | 部署完成后查看线上 `index.html` 源码 | 资源引用必须是 `/track-trash/assets/...`；若为 `/assets/...` 立即按 G 组回滚重部署。判识规则：`vite.config.ts` 构建默认 base 即 `/track-trash/`，任何本地产物若引用 `/assets/...`，必为显式 `VITE_BASE=/` 的构建（本地测量或自定义域名场景），对本仓库 Pages 部署即为误部署 |
+| C0 | 线上产物 base 校验（防白屏，政策见 B4） | 部署完成后查看线上 `index.html` 源码 | 资源引用必须是 `/track-trash/assets/...`，否则立即按 G 组回滚重部署。判识规则：`vite.config.ts` 构建默认 base 即 `/track-trash/`，本地产物引用**任何**非 `/track-trash/assets/...` 前缀即为误构建——① 显式 `VITE_BASE=/`（测量/自定义域名场景）；② **MSYS 路径转换变种**（更隐蔽）：Git Bash 下 `--base=/` 或 `VITE_BASE=/` 会被 MSYS 静默转成 `/LenovoSoftstore/.../PortableGit/` 路径，命令行看着正确、构建输出无异常，但产物引用全 404——引用含 `PortableGit` 即此坑（2026-10-21 工程侧实测）。可靠构建姿势：PowerShell 下调 `vite.CMD`，或 Git Bash 设 `MSYS2_ARG_CONV_EXCL='*'` |
 | C1 | 启用 Pages 后触发一次部署 | Actions 页手动 **Re-run jobs** 任一失败的 Deploy Web run（如 `39535863980`），或 push 任意触发 `apps/web/**` 的 commit | build + deploy 两 job 全绿 |
 | C2 | 首页可访问 | 浏览器开 `https://violawuhoo.github.io/track-trash/` | 200，出现开始页，不再是 404 |
 | C3 | 刷新不 404 | 在游戏界面按 F5 / 手机端下拉刷新 | 仍返回 200（SPA 单入口，无子路由） |

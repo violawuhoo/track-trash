@@ -2,8 +2,8 @@
 
 - **版本**：v2.0.0（开放世界改造首发）
 - **基线 commit**：`5882d30`（质量门验证点：CI 全绿 / 60 用例 / check-content / check-assets / api 9-9 / T10-R2 性能门均在此核验）
-- **main 现状**：`7a68739`（5882d30 之后四连**文档** commit：`ea06137` 发布物料 + `21c5e4d` B4/C0 + `b56f845` 性能报告合并版 + `7a68739` A8 gzip 口径，无代码变更，已全部推送）
-- **发布前注意**：QW1/QW2 代码修复 commit 待入（工程侧实现中，过严守真回归后提交）；该 commit 触及 `apps/web/**` 会触发 deploy-web。**C/D 组验证以最终 shipping commit 的成功部署为准**，不以中间 commit 为准
+- **main 现状**：origin/main = `7a68739`（四连文档 commit，已推送）；本地 main = `fd0b61a`（+`64ed04c` 坑 #11/12 + `fd0b61a` QW1/QW2 出货修复，严守真独立验收 PASS）。**推送被网络阻断**（github.com 不可达：直连 schannel 断、代理 502，api.github.com 正常），本地 ahead origin/main 2 笔，待网络恢复重推
+- **发布前注意**：QW1/QW2 修复已 commit（`fd0b61a`），触及 `apps/web/**`，推送恢复后会自动触发一次 deploy-web——Pages 若未启用即第 9 次 configure-pages 失败（预期内，无回滚风险），若已启用即首次真部署。**C/D 组验证以最终 shipping commit 的成功部署为准**
 - **清单建立日**：2026-10-21
 - **当前门判定**：🔴 **NO-GO** —— 阻塞项 **B1（GitHub Pages 站点未创建）** 未清，见 §B。
 
@@ -20,7 +20,7 @@
 | A5 | 内容校验（80 物品 / 36 配方，无孤立物品、每标签 ≥2 来源） | `node scripts/check-content.mjs` | ✅ 全部通过 |
 | A6 | 资产校验（80 件物品形状齐全、互不撞脸、色值同源） | `node scripts/check-assets.mjs` | ✅ 全部通过 |
 | A7 | api 测试 | `pnpm --filter @haola/api test` | ✅ 9/9 |
-| A8 | 生产构建性能门（Lighthouse + 帧率，T10-R2 定稿） | LH 移动端 Performance **98**（FCP 1.77s / LCP 2.04s / TBT 53ms / CLS 0，412×823@1.75 + 模拟 4× CPU + 1.6Mbps）；首屏 JS gzip **158.6KB**（JS 154.2 + CSS 4.4，实际文件 gzip 实测；全量 JS gzip 232.1KB / 含 CSS 236.5KB）；CPU 4× 降速连续移动 60.87s 均 **59.6fps**（3629 帧）/ 掉帧 **0.4%**（15 帧 >33.3ms，0 帧 >100ms，最差帧 66.7ms）/ 主线程 35.2% / 场景长任务 3 个（63/80/50ms）；冷启动本机 4× FCP 912ms | ✅ **PASS**（阈值：LH ≥85 ✅、JS gz <250KB ✅、60fps 贴线 ✅、首屏 <2s ✅）。数据源：`docs/perf/PERF-REPORT-v2.md`（T10-R2 已定稿，prod4x-clean 轮）。遗留已定位优化：拾取瞬间背包全量重渲染触发整文档重排（trace 有证，QW1 修复中——commit 与严守真验收通过前，A8 不并入 QW 收益数字，避免与验收结论打架）。**真机未测 = 残余风险**（4× 为 CPU 模拟，GL 走桌面 ANGLE/D3D11，真机 GPU/触屏/调度未覆盖），列发布后观察。口径固定为「生产构建 + 4× 降速」 |
+| A8 | 生产构建性能门（Lighthouse + 帧率，T10-R2 + QW1/QW2 定稿） | LH 移动端 Performance **98**（FCP 1.77s / LCP 2.04s / TBT 53ms / CLS 0，412×823@1.75 + 4× CPU + 1.6Mbps）；首屏 JS gzip **158.6KB**（JS 154.2 + CSS 4.4 实测；全量 JS 232.1KB / 含 CSS 236.5KB）；QW 后主包 **158.7KB**（严守真独立复构建 158.82KB）未破线；冷启动本机 4× FCP 912ms。**帧率双口径**：① 基线（`7a68739`）prod4× 移动 60.87s 均 59.6fps / 掉帧 0.4% / 3629 帧 / 最差帧 66.7ms / 主线程 35.2%；② QW1/QW2 修复后（`fd0b61a`）prod4× 59.9fps / 0.2% / 3635 帧，dev4× 59.9fps / 0.1% / 3632 帧，空闲 dev/prod 均 0 掉帧，最差帧均 66.7ms | ✅ **PASS（双口径均过）**（阈值：LH ≥85 ✅、JS gz <250KB ✅、60fps 贴线 ✅、首屏 <2s ✅）。机制级改善（trace 实测）：collect 帧 JS ~127ms→10-25ms@4×、Layout 脏对象 40-47→22-26、总对象 121-162→78、30s Layout 总时长降至 191ms；QW2 点击→canvas（prod4×）610→409ms（该指标噪声大，仅引干净轮）、网络证据 7/7 PASS（7 个渲染器 chunk 点击前发起、点击后零新增）。残余：collect 帧 2-6 帧掉帧，根因已定位为 `HintBar:19` / `Hud:17-19` 的背包相关订阅重渲染（不在 QW1 四文件内），排后续 story。**真机未测 = 残余风险**（4× 为 CPU 模拟，GL 走桌面 ANGLE/D3D11，真机 GPU/触屏/调度未覆盖），列发布后观察。数据源：`docs/perf/PERF-REPORT-v2.md`（T10-R2）+ `fd0b61a` + `docs/perf/measurements/el-perf-probe-*-qw1.json`。口径固定「生产构建 + 4× 降速」 |
 
 > ⚠️ 本地沙箱注意：本机跑 `game-core test` 会因 `EPERM` 静默丢 `world.test.ts`（只收 4 文件 / 39 用例，退出码仍可能为 0 或 1）。**验收以 CI 为准**，本机数字不得作为发布依据（`docs/TASKS-v2.md` §0.5 坑 #2）。
 
@@ -108,6 +108,6 @@
 
 | 时间 | 判定 | 说明 |
 |---|---|---|
-| 2026-10-21 | 🔴 **NO-GO** | B1 未清：Pages 站点未创建，Deploy Web 8 连败于 configure-pages（GITHUB_TOKEN 403）。A 组质量门全绿（含 A8 性能门 T10-R2 定稿 PASS）。 |
+| 2026-10-21 | 🔴 **NO-GO** | B1 未清：Pages 站点未创建，Deploy Web 连败于 configure-pages（GITHUB_TOKEN 403）。A 组质量门全绿（含 A8 性能门双口径 PASS，QW1/QW2 收益 `fd0b61a` 已并入）。QW 修复本地已过严守真验收，推送被网络阻断（origin/main 仍 7a68739）。 |
 
 **放行条件**：B1 → B2 → B3 完成后，C/D/E 全过，即可改判 GO。

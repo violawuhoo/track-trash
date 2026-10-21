@@ -19,6 +19,8 @@ import { describe, expect, it } from 'vitest';
 import {
   AREA_POOLS,
   BRANCHES,
+  ITEMS,
+  ITEM_MAP,
   LOGS,
   RECIPES,
   STAGES,
@@ -419,20 +421,46 @@ describe('阶段 3 三步目标链（正式内容）', () => {
     expect(culprits).toEqual([]);
   });
 
-  it('⑧f 载体的完整依赖链上，每层中间产物在每个阶段都有可命中步位', () => {
+  it('⑧f 载体的完整依赖链：每层非 base 节点都可合成，且每阶段都有可命中步位', () => {
     // ⚠️ C2 批次补 QA 提的断言缺口。
     //
     // 原来的 ⑧d 只验「载体自身的直接配方」（`r.a + r.b → carrier`）。
     // 但载体往往**不是**一步做出来的 —— 它的材料本身可能是合成产物：
-    //   log_q1  ← 什么 ← 什么 ← base
+    //   log_q1  ← hourglass ← echo + broom ← base
     // 中间层如果被阶段目标截胡，玩家就**永远拿不到材料**，
     // 载体那条配方再安全也没用 —— ⑧d 会漏掉这一层。
     //
     // 所以这里把断言扩到「载体的完整依赖链」：
-    // 对每件载体的每层中间产物，断言「每个阶段至少存在一个步位能命中它」。
+    // 对每件载体的每层节点，断言「每个阶段至少存在一个步位能命中它」。
     //
-    // 判定口径与 ⑧d 一致：**不要求任何步位都不被截胡**（阶段目标优先于精确配方
-    // 是正常设计），只要求「永远有一条路能走」。
+    // ## ⚠️ 判定口径（两个必须写准的简化，别让后来人误读）
+    //
+    // **简化一：「查不到产出处」不等于「这是 base 物品」。**
+    // ⚠️ 初版这里用 `if (!producers) continue;` 来跳过叶子 ——
+    // 那等于把「这条产出处不存在」当成「这是基础物品可以直接捡」。
+    // 于是**任何"某层材料彻底无法合成"的回归，都让那一层直接从断言视野里消失**，
+    // 断言恒过（team-lead 变异测试证实的盲区：
+    // 删掉 `recipes.ts` 里 `crowbar + fuel → generator` 这条产出处后，
+    // `generator` 查不到产出处 → 被当成 base 跳过 → ⑧f 不红）。
+    //
+    // 现在改成用 **`items.ts` 的 `kind`** 判定「这是不是可直接捡的基础物品」：
+    // `kind === 'base'` → 叶子（可直接捡），但仍要验它**真的在某个区域的地面池里**
+    // （不在地面池 = 捡不到 = 同样不可达）；
+    // `kind !== 'base'` → 必须**有产出处**，没有就是缺陷（永远做不出来），
+    // red。载体自身的**直接材料**也在链上，同样受这两条约束。
+    //
+    // **简化二：只要求「每个阶段至少一个步位能命中」，不要求步位顺序可达。**
+    // 真实玩法里玩家是**按步位顺序推进**的 —— 阶段 1 的第 1 步和第 3 步不是随便选的，
+    // 玩家在第 1 步时只能用第 1 步能命中的配方。
+    // 所以「阶段 1 第 1 步能命中 X、阶段 1 第 3 步也能命中 X」和
+    // 「阶段 1 第 1 步就能命中 X」在**实际可达性上是不同的**：
+    // 后者玩家一定能做到，前者玩家如果在前面的步位把材料用掉了，可能就做不成。
+    //
+    // 本断言**接受这个简化**：材料消耗后可以重新捡（地面分布每次合成后会重刷，
+    // base 物品会重新铺到地上），且 `world.test.ts` 的「10 万次随机游玩模拟」
+    // 已经从**整体**上覆盖了可达性。这里守的是**更细的维度**：
+    // 「某层材料在某个阶段被阶段目标**完全**截胡」——那种情况下连重新捡都救不了，
+    // 因为该阶段的每一个步位都会把材料吃掉。
     //
     // 「命中」的口径：一个产物可能有多条配方（`RECIPES` 里同产物多条）。
     // 只要**任意一条配方**在某个步位能产出它，就算可达 ——
@@ -460,19 +488,19 @@ describe('阶段 3 三步目标链（正式内容）', () => {
       return [...new Set(safe)].sort((x, y) => x - y);
     };
 
+    // 可捡的物品 = 某个区域地面池里的成员（`world.ts` 的 distribute 只铺这些）
+    const pickable = new Set<string>(Object.values(AREA_POOLS).flat());
+
     const culprits: string[] = [];
     for (const log of LOGS) {
-      // 从载体往下 BFS，逐层展开依赖链
+      // 从载体往下 BFS，逐层展开依赖链（**载体的直接材料也在链上**）
       const seen = new Set<string>([log.carrierId]);
       const queue: string[] = [log.carrierId];
-      const intermediates: string[] = [];
+      const chain: string[] = [];
       while (queue.length) {
         const id = queue.shift()!;
-        const producers = producersOf.get(id);
-        if (!producers) continue; // base 物品：可直接捡，永远可达
-        // 这层产物自己就是「中间产物」（载体的材料 / 材料的材料…）
-        if (id !== log.carrierId) intermediates.push(id);
-        for (const r of producers) {
+        chain.push(id);
+        for (const r of producersOf.get(id) ?? []) {
           for (const m of [r.a, r.b]) {
             if (!seen.has(m)) {
               seen.add(m);
@@ -482,18 +510,85 @@ describe('阶段 3 三步目标链（正式内容）', () => {
         }
       }
 
-      // 每层中间产物：每个阶段至少一个可命中步位
-      for (const mid of intermediates) {
+      for (const id of chain) {
+        const item = ITEM_MAP[id];
+        if (!item) {
+          culprits.push(`${log.carrierId} 的依赖链上 ${id} 不是存在的物品`);
+          continue;
+        }
+
+        if (item.kind === 'base') {
+          // 叶子：可直接捡。但必须真的在某个区域的地面池里 ——
+          // 不在地面池 = 玩家永远捡不到 = 同样不可达。
+          if (!pickable.has(id)) {
+            culprits.push(`${log.carrierId} 的基础材料 ${id} 不在任何区域的地面池里（捡不到）`);
+          }
+          continue; // base 不需要合成，不受「被截胡」影响
+        }
+
+        // 非 base：必须有产出处。没有 = 永远做不出来 = 缺陷（不能跳过！）
+        const producers = producersOf.get(id) ?? [];
+        if (producers.length === 0) {
+          culprits.push(
+            `${log.carrierId} 的依赖链上 ${id}（kind=${item.kind}）没有任何产出处 —— 永远做不出来`,
+          );
+          continue;
+        }
+
+        // 有产出处：每个阶段至少一个可命中步位（不被阶段目标完全截胡）
         for (const stage of [1, 2, 3] as const) {
-          const safe = reachableInStage(mid, stage);
+          const safe = reachableInStage(id, stage);
           if (safe.length === 0) {
             culprits.push(
-              `${log.carrierId} 的中间产物 ${mid} 在阶段 ${stage} 的所有步位都被截胡（无任何可命中步位）`,
+              `${log.carrierId} 的中间产物 ${id} 在阶段 ${stage} 的所有步位都被截胡（无任何可命中步位）`,
             );
           }
         }
       }
     }
+    expect(culprits).toEqual([]);
+  });
+
+  it('⑧g 正向可达性：每件载体都能从可捡的基础物品有限次合成得到（闭包证明）', () => {
+    // ⑧f 是**反向**走（从载体往下找材料），它能发现「中间产物在某阶段被完全截胡」。
+    // 但反向走有一个结构性盲区：**正向可达性**（base → … → 载体）证明不了。
+    //
+    // 这条用**正向闭包**补上：
+    // 1. 起点集合 = 所有 `kind === 'base'` 且在某个区域地面池里的物品（可直接捡）
+    // 2. 不动点迭代：某条配方 `a + b → out` 的 a、b 都在集合里 → out 也进集合
+    // 3. 断言每件载体都在闭包里
+    //
+    // 「不动点」这一步是关键：闭包里的物品**互相依赖**也能被推出来
+    // （`valvework ← mirror + tape`、`toolstand ← valvework + tire`），
+    // 单趟扫描推不出来。
+    //
+    // ⚠️ 这条与 `playthrough.test.ts` 的「所有配方产物都能从基础物品经过有限次合成得到」
+    // 覆盖范围不同：那条验的是**全部配方产物**，这条验的是**8 件日志载体**
+    // （载体的直接材料 + 中间产物必须同时可合成），
+    // 并且**故意不要求中间产物在某个阶段不被截胡** —— 那是 ⑧f 的维度。
+    //
+    // 变异测试（删掉 `recipes.ts` 里 `crowbar + fuel → generator`）：
+    // `generator` 推不进闭包 → `log_reel1`（= generator + note）推不进 → **本条变红**。
+    const pickableBase = ITEMS.filter(
+      (i) => i.kind === 'base' && Object.values(AREA_POOLS).flat().includes(i.id),
+    ).map((i) => i.id);
+
+    const derivable = new Set<string>(pickableBase);
+    let changed = true;
+    while (changed) {
+      changed = false;
+      for (const r of RECIPES) {
+        if (derivable.has(r.out)) continue;
+        if (derivable.has(r.a) && derivable.has(r.b)) {
+          derivable.add(r.out);
+          changed = true;
+        }
+      }
+    }
+
+    const culprits = LOGS.filter((l) => !derivable.has(l.carrierId)).map(
+      (l) => `${l.carrierId} 无法从可捡的基础物品有限次合成得到`,
+    );
     expect(culprits).toEqual([]);
   });
 

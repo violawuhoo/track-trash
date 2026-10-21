@@ -1037,6 +1037,188 @@ button:focus:not(:focus-visible) {
   color: var(--ink-soft);
 }
 
+/* ═══════════════════ 前任日志面板（C1 批次） ═══════════════════ */
+
+/* HUD「记录」按钮。视觉与背包按钮同族，热区靠 ::after 补到 44px */
+.hud__log {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-1);
+  height: 28px;
+  padding: 0 var(--sp-2);
+  border: var(--stroke) solid var(--ink);
+  border-radius: var(--radius-pill);
+  background: var(--paper);
+  font-weight: 800;
+  font-size: var(--fs-2xs);
+  box-shadow: var(--shadow-sm);
+  transition: transform var(--dur-1) var(--ease-out),
+    box-shadow var(--dur-1) var(--ease-out);
+  pointer-events: auto;
+}
+
+.hud__log::after {
+  content: '';
+  position: absolute;
+  inset: -8px -4px;
+}
+
+.hud__log:active {
+  transform: translate(2px, 2px);
+  box-shadow: var(--shadow-press);
+}
+
+.logpanel {
+  align-items: center;
+}
+
+.logpanel__card {
+  display: flex;
+  flex-direction: column;
+  width: min(100%, 560px);
+  max-height: min(86dvh, 760px);
+  padding: var(--sp-4);
+  border: var(--stroke) solid var(--ink);
+  border-radius: var(--radius-xl);
+  background: var(--paper);
+  box-shadow: var(--shadow-sheet);
+  animation: sheet-in var(--dur-2) var(--ease-out);
+}
+
+.logpanel__head {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding-bottom: var(--sp-3);
+  border-bottom: var(--stroke-thin) solid var(--rule);
+}
+
+.logpanel__title {
+  font-family: var(--font-display);
+  font-size: var(--fs-h2);
+  line-height: var(--lh-tight);
+  margin: 0;
+}
+
+.logpanel__meta {
+  margin-left: auto;
+  font-size: var(--fs-2xs);
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+
+.logpanel__body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  padding-top: var(--sp-3);
+}
+
+.logentry {
+  border: var(--stroke-thin) solid var(--rule);
+  border-radius: var(--radius-sm);
+  padding: var(--sp-3);
+  background: var(--cream);
+}
+
+.logentry--readable {
+  border-color: var(--ink);
+  background: var(--paper);
+}
+
+.logentry--locked {
+  border-style: dashed;
+  background: transparent;
+}
+
+.logentry.is-open {
+  border-color: var(--ink);
+  box-shadow: var(--shadow-sm);
+}
+
+.logentry__head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-2);
+  width: 100%;
+  padding: 0;
+  border: none;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+}
+
+.logentry__head:disabled {
+  cursor: default;
+}
+
+.logentry__title {
+  font-size: var(--fs-body);
+  font-weight: 800;
+  line-height: var(--lh-tight);
+  margin: 0;
+}
+
+.logentry__title--unknown {
+  font-weight: 400;
+  color: var(--ink-soft);
+  font-style: italic;
+}
+
+.logentry__day {
+  margin-left: auto;
+  font-size: var(--fs-2xs);
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+
+.logentry__hint {
+  margin: var(--sp-1) 0 0;
+  font-size: var(--fs-xs);
+  color: var(--ink-soft);
+  line-height: var(--lh-body);
+}
+
+.logentry__hint--tap {
+  color: var(--ink-faint);
+}
+
+.logentry__puzzle {
+  margin: 0 0 var(--sp-3);
+  padding: var(--sp-2) var(--sp-3);
+  border-left: var(--stroke) solid var(--purple);
+  background: var(--cream);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  line-height: var(--lh-body);
+}
+
+.logentry__body {
+  margin-top: var(--sp-3);
+  border-top: var(--stroke-thin) solid var(--rule);
+  padding-top: var(--sp-3);
+}
+
+.logentry__para {
+  margin: 0 0 var(--sp-3);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-body);
+}
+
+.logentry__para:last-child {
+  margin-bottom: 0;
+}
+
+.logentry__para strong {
+  font-weight: 800;
+}
+
 /* ═══════════════════ 断点 ═══════════════════ */
 
 /* ≤380px：76px 卡片内宽只剩 60px，物品名降到 --fs-nano */

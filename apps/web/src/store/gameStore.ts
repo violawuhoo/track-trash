@@ -26,6 +26,7 @@
 import { create } from 'zustand';
 import {
   BRANCHES,
+  LOG_BY_ID,
   addItem,
   allBranchStatus,
   appendLog,
@@ -90,6 +91,11 @@ function fromCore(next: SaveState, world: PlacedItem[], tutorial: TutorialState)
     keepsakes: next.keepsakes,
     buildDone: next.buildDone,
     ngPlus: next.ngPlus,
+    // C1 批次：累计合成次数 + 已获得的前任日志 id 集合。
+    // `fromCore` 是**逐字段列举**的（不是展开 next），所以新增字段必须显式带出，
+    // 漏一个就静默丢数据 —— 这条是 web 侧存档字段的通用规矩。
+    crafts: next.crafts,
+    logsFound: next.logsFound,
     accidents: next.accidents,
     log: next.log,
     ending: next.ending,
@@ -147,6 +153,30 @@ function readBranches(raw: unknown): Record<string, boolean> {
   if (!raw || typeof raw !== 'object') return out;
   const b = raw as Record<string, unknown>;
   for (const key of Object.keys(out)) out[key] = b[key] === true;
+  return out;
+}
+
+/** 读档归一化：累计合成次数。缺字段 / 坏形状 / 负数 → 0 */
+function readCrafts(raw: unknown): number {
+  if (typeof raw !== 'number' || !Number.isFinite(raw) || raw < 0) return 0;
+  return Math.floor(raw);
+}
+
+/**
+ * 读档归一化：已获得的前任日志 id 集合。
+ *
+ * 只保留 `LOGS` 里真实存在的 id —— 存档可能被手改过，
+ * 塞进来的假 id 会让日志面板渲染出不存在的东西。
+ */
+function readLogsFound(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return [];
+  const out: string[] = [];
+  for (const id of raw) {
+    if (typeof id !== 'string') continue;
+    if (!LOG_BY_ID[id]) continue;
+    if (out.includes(id)) continue;
+    out.push(id);
+  }
   return out;
 }
 
@@ -211,6 +241,11 @@ function readSavedGame(): SaveStateV2 | null {
       // 归一化：老存档的 branches 缺 stay 键 → 一律 false。
       // 不做的话 `branches.stay` 读到 undefined，UI 与 availableEndings 的形状会不一致。
       branches: readBranches(parsed.branches),
+      // 归一化：老存档没有 crafts 字段 → 0（不影响既有进度，只是日志解锁条件之一）。
+      crafts: readCrafts(parsed.crafts),
+      // 归一化：老存档没有 logsFound 字段 → 空数组。
+      // 只保留真实存在的日志 id，去重。
+      logsFound: readLogsFound(parsed.logsFound),
     };
   } catch {
     return null;
@@ -282,6 +317,8 @@ interface GameStore {
   viewing: string | null;
   /** 背包抽屉 / 网页侧栏的展开态 */
   bagOpen: boolean;
+  /** 前任日志面板的展开态（C1 批次） */
+  logOpen: boolean;
   /**
    * T7 一次性事件台词的防重旗（不入存档）。
    * 引导期内「首次合错 / 首次被雾障弹回」各只说一次；刷新后可能重来一次，可接受。
@@ -328,6 +365,9 @@ interface GameStore {
   setViewportHalf: (half: number) => void;
   toggleBag: () => void;
   closeBag: () => void;
+  /** C1 批次：前任日志面板开关 */
+  toggleLog: () => void;
+  closeLog: () => void;
 
   backToStart: () => void;
   resetAll: () => void;
@@ -358,6 +398,7 @@ export const useGame = create<GameStore>((set, get) => {
     dialogIndex: 0,
     viewing: null,
     bagOpen: false,
+    logOpen: false,
     tutorFlags: { wrong: false, blocked: false },
 
     player: spawnPoint(),
@@ -387,6 +428,7 @@ export const useGame = create<GameStore>((set, get) => {
         dialogIndex: 0,
         viewing: null,
         bagOpen: false,
+        logOpen: false,
         tutorFlags: { wrong: false, blocked: false },
         player: spawn,
         spawn,
@@ -412,6 +454,7 @@ export const useGame = create<GameStore>((set, get) => {
         dialogIndex: 0,
         viewing: null,
         bagOpen: false,
+        logOpen: false,
         tutorFlags: { wrong: false, blocked: false },
         player: spawn,
         spawn,
@@ -690,9 +733,21 @@ export const useGame = create<GameStore>((set, get) => {
       set({ viewportHalf: half });
     },
 
-    toggleBag: () => set({ bagOpen: !get().bagOpen }),
+    // 背包与日志面板互斥（一次只开一个）
+    toggleBag: () => {
+      const next = !get().bagOpen;
+      set({ bagOpen: next, ...(next ? { logOpen: false } : {}) });
+    },
 
     closeBag: () => set({ bagOpen: false }),
+
+    /** C1 批次：前任日志面板开关。背包与日志面板互斥（一次只开一个） */
+    toggleLog: () => {
+      const next = !get().logOpen;
+      set({ logOpen: next, ...(next ? { bagOpen: false } : {}) });
+    },
+
+    closeLog: () => set({ logOpen: false }),
 
     backToStart: () => set({ screen: 'start', dialog: [], dialogIndex: 0 }),
 
@@ -757,6 +812,7 @@ export const useGame = create<GameStore>((set, get) => {
         toast: null,
         viewing: null,
         bagOpen: false,
+        logOpen: false,
         tutorFlags: { wrong: false, blocked: false },
         player: spawn,
         spawn,

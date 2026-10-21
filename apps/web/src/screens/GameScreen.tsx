@@ -9,6 +9,7 @@
  * ├── TutorBar             // T7 引导提示（引导期内占 HintBar 的位置）
  * ├── HintBar              // 左下「缺：能粘的东西」
  * ├── BagDrawer            // 背包 + 双槽合成（≥1024 时常驻右侧栏）
+ * ├── LogPanel             // C1：前任日志面板（HUD「记录」入口）
  * └── DialogueBar          // 底部，可上滑收起
  * ```
  *
@@ -27,6 +28,7 @@ import { Hud } from '../components/Hud';
 import { HintBar } from '../components/HintBar';
 import { TutorBar } from '../components/TutorBar';
 import { BagDrawer } from '../components/BagDrawer';
+import { LogPanel } from '../components/LogPanel';
 import { DialogueBar } from '../components/DialogueBar';
 
 /** 走进雾障时的台词。毒舌但不攻击玩家（T6 语气约束） */
@@ -166,6 +168,7 @@ export function GameScreen() {
       <TutorBar />
       <HintBar />
       <BagDrawer />
+      <LogPanel />
       <DialogueBar lines={dialog} index={dialogIndex} onAdvance={advanceDialog} />
     </div>
   );

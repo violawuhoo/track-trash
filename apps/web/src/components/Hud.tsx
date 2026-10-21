@@ -7,6 +7,8 @@
  * - 容器 `pointer-events: none`，只有按钮自己开启 —— 点 HUD 空白要能落到画布上触发移动。
  * - 热区靠 `::after` 补到 44px，视觉高度不变（设计系统 §8「热区与视觉分离」）。
  */
+import { useMemo } from 'react';
+import { readableLogs } from '@haola/game-core';
 import { useGame } from '../store/gameStore';
 
 const ZOOM_STEP = 0.2;
@@ -19,8 +21,28 @@ export function Hud() {
   );
   const zoom = useGame((s) => s.zoom);
   const bagOpen = useGame((s) => s.bagOpen);
+  const logOpen = useGame((s) => s.logOpen);
+  // 已读日志篇数（可读 = 解锁条件满足 + 载体已获得）。
+  // 细粒度订阅：只订阅这 5 个标量/数组引用，别订阅整个 save。
+  const logDay = useGame((s) => s.save.day);
+  const logCrafts = useGame((s) => s.save.crafts);
+  const logStage = useGame((s) => s.save.stage);
+  const logBuildDone = useGame((s) => s.save.buildDone);
+  const logLogsFound = useGame((s) => s.save.logsFound);
+  const logCount = useMemo(
+    () =>
+      readableLogs({
+        day: logDay,
+        crafts: logCrafts,
+        stage: logStage,
+        buildDone: logBuildDone,
+        logsFound: logLogsFound,
+      }).length,
+    [logDay, logCrafts, logStage, logBuildDone, logLogsFound],
+  );
   const setZoom = useGame((s) => s.setZoom);
   const toggleBag = useGame((s) => s.toggleBag);
+  const toggleLog = useGame((s) => s.toggleLog);
 
   return (
     <header className="hud">
@@ -55,6 +77,17 @@ export function Hud() {
             +
           </button>
         </div>
+
+        <button
+          type="button"
+          className="hud__log"
+          onClick={toggleLog}
+          aria-pressed={logOpen}
+          aria-label={`前任的记录，已读到 ${logCount} 篇`}
+        >
+          <span className="hud__baglabel">记录</span>
+          {logCount > 0 && <span className="hud__badge">{logCount}</span>}
+        </button>
 
         <button
           type="button"

@@ -5,14 +5,24 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import type { FastifyInstance } from 'fastify';
 
-// 测试库落在临时目录，用完删；必须在 import app 之前设好（env 在模块求值时读取）
+// 测试库落在临时目录，用完删。
+//
+// ⚠️ **必须用动态 import**（2026 复审发现，原先这里是静态 import）：
+// ESM 的静态 `import` 会被**提升到模块 body 之前**求值。
+// `../src/app.js` → `db/client.js` → `env.js` 这条链在下面这行
+// `process.env.SQLITE_FILE = ...` **执行之前**就已经求值完了 ——
+// `env.SQLITE_FILE` 拿到的是 fallback `'data/saves.db'`，
+// 于是测试库落进仓库（`apps/api/data/saves.db`），污染工作区，
+// 而且两次运行共用同一个库。
+// 改成 `await import(...)` 后，env 设置一定先于模块求值。
 const tmp = mkdtempSync(join(tmpdir(), 'haola-api-test-'));
 process.env.SQLITE_FILE = join(tmp, 'saves.db');
 process.env.RATE_LIMIT = '10000';
 process.env.WEB_ORIGIN = '';
 
-import { buildApp } from '../src/app.js';
-import { closeDb } from '../src/db/client.js';
+// 动态 import（见上）：必须在 env 设置之后求值。
+const { buildApp } = await import('../src/app.js');
+const { closeDb } = await import('../src/db/client.js');
 import { progressScoreOf as coreProgressScoreOf } from '@haola/game-core';
 // web 侧的评分封装。跨包 import 只为了断言「两端必然同数」——
 // web / api 都是 core 那一份纯函数的薄封装，任何一端手抄公式都会在这里对不上。

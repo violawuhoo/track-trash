@@ -30,6 +30,7 @@ import {
   recordBranch,
   recordEnding,
   recordReadLog,
+  STAGES,
   stage1ExampleItemsInCrash,
   startNextCycle,
   type NgPlusState,
@@ -284,6 +285,44 @@ describe('F. G2 配对示例（阶段 1）', () => {
       expect(AREA_POOLS.crash).toContain(ex.b);
       expect(getItem(ex.a)!.kind).toBe('base');
       expect(getItem(ex.b)!.kind).toBe('base');
+    }
+  });
+
+  /**
+   * F4（2026 复审补）：示例里的**两件都必须各自贡献这一步 requires 的一个标签**。
+   *
+   * 回归的是初版 `s1-2: wrench + tape` 的缺陷 —— `wrench` 自己就带「导电 + 金属」，
+   * `tape` 一个标签都贡献不上，是没有语义组合含义的凑数材料。
+   */
+  it('F4 每件示例材料都贡献该步的一个必需标签（没有凑数的无用材料）', () => {
+    for (let i = 0; i < 3; i++) {
+      const ex = pairingExample(1, i)!;
+      const req = STAGES[0].steps[i]!.requires;
+      const hitA = req.filter((t) => getItem(ex.a)!.tags.includes(t));
+      const hitB = req.filter((t) => getItem(ex.b)!.tags.includes(t));
+      expect(hitA.length, `s1-${i + 1} 的 a 不贡献任何必需标签`).toBeGreaterThan(0);
+      expect(hitB.length, `s1-${i + 1} 的 b 不贡献任何必需标签`).toBeGreaterThan(0);
+      // 两件合起来必须覆盖这一步的全部要求
+      const union = new Set([...hitA, ...hitB]);
+      expect(req.every((t) => union.has(t)), `s1-${i + 1} 覆盖不全`).toBe(true);
+    }
+  });
+
+  /**
+   * F5（2026 复审补）：文案是**标签方向提示**，不是配方步骤。
+   *
+   * 口径：文案必须点名这一步要的标签，并给出「同一类里换别的也行」的余地，
+   * 不得出现「照着做一定能过」这种对材料可得性的强承诺。
+   */
+  it('F5 文案给出标签方向而不是配方步骤', () => {
+    for (let i = 0; i < 3; i++) {
+      const ex = pairingExample(1, i)!;
+      const req = STAGES[0].steps[i]!.requires;
+      for (const t of req) {
+        expect(ex.text, `s1-${i + 1} 文案没提标签「${t}」`).toContain(t);
+      }
+      expect(ex.text).toContain('换别的也行');
+      expect(ex.text).not.toContain('一定能过');
     }
   });
 });

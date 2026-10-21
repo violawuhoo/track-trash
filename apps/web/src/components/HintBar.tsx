@@ -126,8 +126,9 @@ export function HintBar() {
                 ))}
               </div>
               {/* G2「你有点手艺」（C2 批次）：二周目里阶段 1 的目标提示额外给一行
-                  可行配对示例。只改文案、不改判定 —— 示例本身是 core 算出来的，
-                  照着做一定能过这一步。 */}
+                  标签方向示例。只改文案、不改判定 —— 示例是 core 算出来的，
+                  给的是「这一步要哪两个标签」+ 一个例子，不是配方步骤，
+                  玩家换成同类的另一件也照样能过这一步。 */}
               {cycle >= 2 && pairingExample(stage, stepIndex) && (
                 <div className="hint__example">
                   {pairingExample(stage, stepIndex)!.text}

@@ -711,6 +711,8 @@ v2.0.0 上线时有三处内容是「结构有、货没填」：
 #### 保留（跨周目累积）
 
 > **真源**：core `packages/game-core/src/ngplus.ts` 的 `startNextCycle()` 与 `NEXT_CYCLE_KEPT`。本表与 core 的保留清单**逐字段一一对应**；core 加字段必须回来更新本表（`packages/game-core/tests/ngplus.test.ts` 的 B5/B6 断言守着这个守恒）。
+>
+> **✅ 本表已与 core 的 `NEXT_CYCLE_KEPT` / `NEXT_CYCLE_RESET` 逐字段核对一致（2026-10-22，文策渊）**：字段集合不多不少（保留 5 项 / 重置 16 字段）、分类（保留 / 重置）与实现逐项一致、玩家可见措辞与 `CONTENT-v3-NGPLUS-UI-COPY.md` 的 K1–K5 / R1–R8 逐字一致。**core 是真源**——core 改了字段或文案，回来改本表；本表与 core 冲突时以 core 为准。
 
 | 保留项 | 字段 | 对玩家的后果 | 说明 |
 |---|---|---|---|
@@ -725,6 +727,8 @@ v2.0.0 上线时有三处内容是「结构有、货没填」：
 #### 重置（进入新周目时）
 
 > **真源**：core `packages/game-core/src/ngplus.ts` 的 `startNextCycle()` 与 `NEXT_CYCLE_RESET`。本表与 core 的重置清单**逐字段一一对应**（含 QA 2026-10-22 复审补上的 `crafts` / `logsFound` / `buildDone` 三项）。core 加字段必须回来更新本表。
+>
+> **✅ 本表已与 core 的 `NEXT_CYCLE_RESET` 逐字段核对一致（2026-10-22，文策渊）**：core 的 8 条覆盖 16 个字段，本表 16 个字段一一落位、分类全对；玩家可见措辞与 `CONTENT-v3-NGPLUS-UI-COPY.md` 的 R1–R8 逐字一致。**core 是真源**——core 改了字段或文案，回来改本表；本表与 core 冲突时以 core 为准。
 
 **（一）世界进度（全部归零）**
 
@@ -738,9 +742,9 @@ v2.0.0 上线时有三处内容是「结构有、货没填」：
 | `stage` | `1` | 阶段进度（回到迫降期，从头修信号器） |
 | `stepIndex` | `0` | 阶段内的步位（回到第一步） |
 | `branches` | `{ship:false,teashop:false,birthday:false,stay:false}` | 已完成的支线（但还是得重新做一遍） |
-| `buildDone` | `false` | 阶段 3 三步是否走满（第四支线的可见性条件，回到未走满） |
+| `buildDone` | `false` | **L8《数据卷盘》重新上锁** —— `logs.ts` 里 L8 的解锁条件是 `unlock: { buildDone: true }`，`buildDone` 归零后这篇**读不了了**，二周目必须重新走满建设期才能解锁。⚠️ 另注（设计意图 vs 实现现状）：§3.6 写的「第四支线随建设期完成才可见」在实现里**尚未落地**（`requiresBuild` 字段不存在，支线面板无条件列出全部四条），所以 `buildDone` 归零**不会**让第四支线消失——这是实现层滞后，不是本表的描述错误 |
 | `accidents` | `0` | 意外次数（计数器归零） |
-| `log` | `[]` | 这一周的世界日志（上一周目写的那些行没了） |
+| `log` | 旧行全没，**并新增一条系统日志** | 这一周的世界日志（上一周目写的那些行没了）；实现上 `startNextCycle()` 会写入一条「第 N 周目。地面上的东西都回到原位。」作为新周目的第一条记录 |
 | `ending` | `null` | 当前结局（从零开始） |
 | `launchAttempts` / `launchFailures` | `0` | 起飞尝试与失败的次数（计数器归零） |
 

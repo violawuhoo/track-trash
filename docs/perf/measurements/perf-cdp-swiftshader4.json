@@ -1,0 +1,137 @@
+{
+  "label": "swiftshader4",
+  "url": "http://127.0.0.1:5176/",
+  "ua": "Mozilla/5.0 (Linux; Android 13; SM-A546B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Mobile Safari/537.36",
+  "viewport": "390x844 @ DPR2, isMobile+hasTouch",
+  "cpuThrottle": 4,
+  "glMode": "forced-swiftshader",
+  "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+  "measuredAt": "2026-10-21T03:28:06.723Z",
+  "load": {
+    "ttfbMs": 3,
+    "dclMs": 417,
+    "loadMs": 427,
+    "fcpMs": 660,
+    "lcpMs": 660,
+    "requests": 64,
+    "transferBytes": 3985888,
+    "decodedBytes": 4119799,
+    "byType": {
+      "script": {
+        "n": 63,
+        "bytes": 3985569
+      },
+      "fetch": {
+        "n": 1,
+        "bytes": 319
+      }
+    },
+    "heapMb": 11,
+    "navWallMs": 708
+  },
+  "gameEntry": {
+    "clickToCanvasMs": 605,
+    "clickToWorldLoopMs": 605,
+    "worldItems": 18,
+    "heapMb": 16,
+    "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)"
+  },
+  "scenes": {
+    "idle": {
+      "frames": 81,
+      "callbacks": 162,
+      "spanS": 8.1,
+      "meanFps": 9.9,
+      "p50Ms": 100,
+      "p90Ms": 133.4,
+      "p95Ms": 133.4,
+      "p99Ms": 150,
+      "maxMs": 150,
+      "over16": 80,
+      "over33": 80,
+      "over50": 80,
+      "over100": 38,
+      "droppedPct": 100,
+      "heapEndMb": 14,
+      "longtasks": {
+        "n": 80,
+        "ms": 7899,
+        "over50": 80
+      }
+    },
+    "move": {
+      "frames": 171,
+      "callbacks": 342,
+      "spanS": 25.7,
+      "meanFps": 6.6,
+      "p50Ms": 150,
+      "p90Ms": 183.4,
+      "p95Ms": 200,
+      "p99Ms": 250,
+      "maxMs": 250,
+      "over16": 170,
+      "over33": 170,
+      "over50": 170,
+      "over100": 168,
+      "droppedPct": 100,
+      "heapEndMb": 14,
+      "longtasks": {
+        "n": 172,
+        "ms": 25168,
+        "over50": 172
+      }
+    }
+  },
+  "moveSamples": [
+    {
+      "tS": 1.6,
+      "world": 17,
+      "bag": 1,
+      "px": 727,
+      "py": 643
+    },
+    {
+      "tS": 5.7,
+      "world": 16,
+      "bag": 2,
+      "px": 706,
+      "py": 706
+    },
+    {
+      "tS": 11.1,
+      "world": 16,
+      "bag": 2,
+      "px": 713,
+      "py": 692
+    },
+    {
+      "tS": 15.2,
+      "world": 16,
+      "bag": 2,
+      "px": 769,
+      "py": 685
+    },
+    {
+      "tS": 21,
+      "world": 16,
+      "bag": 2,
+      "px": 762,
+      "py": 692
+    },
+    {
+      "tS": 25.3,
+      "world": 16,
+      "bag": 2,
+      "px": 762,
+      "py": 650
+    }
+  ],
+  "endState": {
+    "player": {
+      "x": 762,
+      "y": 650
+    },
+    "screen": "game"
+  },
+  "pageErrors": []
+}

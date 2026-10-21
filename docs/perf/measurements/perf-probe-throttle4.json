@@ -1,0 +1,197 @@
+{
+  "label": "throttle4",
+  "url": "http://127.0.0.1:5176/",
+  "ua": "Mozilla/5.0 (Linux; Android 13; SM-A546B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Mobile Safari/537.36",
+  "viewport": "390x844 @ DPR2, isMobile+hasTouch",
+  "cpuThrottle": 4,
+  "measuredAt": "2026-10-21T03:16:56.143Z",
+  "load": {
+    "ttfbMs": 16,
+    "dclMs": 1451,
+    "loadMs": 1456,
+    "fcpMs": 2052,
+    "lcpMs": 2052,
+    "cls": 0,
+    "tbtMs": 658,
+    "longTaskCount": 1,
+    "requests": 64,
+    "transferBytes": 3985888,
+    "decodedBytes": 4119799,
+    "byType": {
+      "script": {
+        "n": 63,
+        "bytes": 3985569
+      },
+      "fetch": {
+        "n": 1,
+        "bytes": 319
+      }
+    },
+    "biggest": [
+      {
+        "name": "http://127.0.0.1:5176/node_modules/.vite/deps/chunk-BLE4GOYO.js?v=9bc0e0de",
+        "type": "script",
+        "bytes": 928783,
+        "ms": 42
+      },
+      {
+        "name": "http://127.0.0.1:5176/node_modules/.vite/deps/pixi__js.js?v=9d66f582",
+        "type": "script",
+        "bytes": 813351,
+        "ms": 19
+      },
+      {
+        "name": "http://127.0.0.1:5176/node_modules/.vite/deps/chunk-MPFL3ONO.js?v=9bc0e0de",
+        "type": "script",
+        "bytes": 240483,
+        "ms": 10
+      },
+      {
+        "name": "http://127.0.0.1:5176/node_modules/.vite/deps/chunk-YMDQKY7L.js?v=9bc0e0de",
+        "type": "script",
+        "bytes": 159416,
+        "ms": 6
+      },
+      {
+        "name": "http://127.0.0.1:5176/node_modules/.vite/deps/chunk-6JV4AP2P.js?v=9bc0e0de",
+        "type": "script",
+        "bytes": 151460,
+        "ms": 9
+      },
+      {
+        "name": "http://127.0.0.1:5176/node_modules/.vite/deps/chunk-HMQMDWGU.js?v=9bc0e0de",
+        "type": "script",
+        "bytes": 148848,
+        "ms": 8
+      },
+      {
+        "name": "http://127.0.0.1:5176/node_modules/.vite/deps/chunk-56UNLVE7.js?v=9bc0e0de",
+        "type": "script",
+        "bytes": 128674,
+        "ms": 6
+      },
+      {
+        "name": "http://127.0.0.1:5176/node_modules/.vite/deps/chunk-LHKO4TUN.js?v=9bc0e0de",
+        "type": "script",
+        "bytes": 118225,
+        "ms": 6
+      },
+      {
+        "name": "http://127.0.0.1:5176/node_modules/.vite/deps/chunk-EYMSEIKR.js?v=9bc0e0de",
+        "type": "script",
+        "bytes": 111167,
+        "ms": 11
+      },
+      {
+        "name": "http://127.0.0.1:5176/node_modules/.vite/deps/chunk-3RR5FHBA.js?v=9bc0e0de",
+        "type": "script",
+        "bytes": 108103,
+        "ms": 6
+      },
+      {
+        "name": "http://127.0.0.1:5176/node_modules/.vite/deps/chunk-NH6YIUZV.js?v=9bc0e0de",
+        "type": "script",
+        "bytes": 100796,
+        "ms": 8
+      },
+      {
+        "name": "http://127.0.0.1:5176/node_modules/.vite/deps/chunk-RLDCJ42J.js?v=9bc0e0de",
+        "type": "script",
+        "bytes": 82516,
+        "ms": 5
+      },
+      {
+        "name": "http://127.0.0.1:5176/node_modules/.vite/deps/chunk-2YX7DZXR.js?v=9bc0e0de",
+        "type": "script",
+        "bytes": 78270,
+        "ms": 5
+      },
+      {
+        "name": "http://127.0.0.1:5176/node_modules/.vite/deps/chunk-PEJ2CLNS.js?v=9bc0e0de",
+        "type": "script",
+        "bytes": 60675,
+        "ms": 7
+      },
+      {
+        "name": "http://127.0.0.1:5176/src/world/WorldCanvas.tsx",
+        "type": "script",
+        "bytes": 58927,
+        "ms": 7
+      }
+    ],
+    "navWallMs": 2134
+  },
+  "gameEntry": {
+    "clickToCanvasMs": 1090,
+    "clickToWorldLoopMs": 1090,
+    "worldItems": 13
+  },
+  "scenarios": {
+    "idle": {
+      "frames": 1200,
+      "spanS": 10.02,
+      "meanFps": 119.7,
+      "p50Ms": 0,
+      "p90Ms": 16.7,
+      "p95Ms": 16.7,
+      "p99Ms": 16.8,
+      "maxMs": 50.1,
+      "over16": 175,
+      "over33": 1,
+      "over50": 1,
+      "over100": 0,
+      "droppedPct": 0.1,
+      "taskS": null,
+      "scriptS": null,
+      "layoutS": null,
+      "styleS": null,
+      "mainThreadBusyPct": null,
+      "heapEndMB": 0
+    },
+    "move": {
+      "frames": 7248,
+      "spanS": 60.75,
+      "meanFps": 119.3,
+      "p50Ms": 0,
+      "p90Ms": 16.7,
+      "p95Ms": 16.7,
+      "p99Ms": 16.8,
+      "maxMs": 233.1,
+      "over16": 1221,
+      "over33": 7,
+      "over50": 2,
+      "over100": 1,
+      "droppedPct": 0.1,
+      "taskS": null,
+      "scriptS": null,
+      "layoutS": null,
+      "styleS": null,
+      "mainThreadBusyPct": null,
+      "heapEndMB": 0
+    }
+  },
+  "endState": {
+    "player": {
+      "x": 890.3519999999979,
+      "y": 579.9439999999995
+    },
+    "screen": "game"
+  },
+  "pageErrors": [],
+  "framesTotal": 8456,
+  "framesBoot": {
+    "frames": 8,
+    "spanS": 1.25,
+    "meanFps": 5.6,
+    "p50Ms": 0,
+    "p90Ms": 749.9,
+    "p95Ms": 749.9,
+    "p99Ms": 749.9,
+    "maxMs": 749.9,
+    "over16": 3,
+    "over33": 3,
+    "over50": 3,
+    "over100": 2,
+    "droppedPct": 42.9
+  }
+}

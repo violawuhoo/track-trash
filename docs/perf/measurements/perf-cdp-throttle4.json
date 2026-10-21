@@ -1,0 +1,189 @@
+{
+  "label": "throttle4",
+  "url": "http://127.0.0.1:5176/",
+  "ua": "Mozilla/5.0 (Linux; Android 13; SM-A546B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Mobile Safari/537.36",
+  "viewport": "390x844 @ DPR2, isMobile+hasTouch",
+  "cpuThrottle": 4,
+  "glMode": "default-angle",
+  "renderer": "ANGLE (Intel, Intel(R) Arc(TM) 130T GPU (15GB) (0x00007D51) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+  "measuredAt": "2026-10-21T03:26:08.308Z",
+  "load": {
+    "ttfbMs": 5,
+    "dclMs": 505,
+    "loadMs": 515,
+    "fcpMs": 756,
+    "lcpMs": 756,
+    "requests": 64,
+    "transferBytes": 3985888,
+    "decodedBytes": 4119799,
+    "byType": {
+      "script": {
+        "n": 63,
+        "bytes": 3985569
+      },
+      "fetch": {
+        "n": 1,
+        "bytes": 319
+      }
+    },
+    "heapMb": 11,
+    "navWallMs": 779
+  },
+  "gameEntry": {
+    "clickToCanvasMs": 990,
+    "clickToWorldLoopMs": 990,
+    "worldItems": 14,
+    "heapMb": 15,
+    "renderer": "ANGLE (Intel, Intel(R) Arc(TM) 130T GPU (15GB) (0x00007D51) Direct3D11 vs_5_0 ps_5_0, D3D11)"
+  },
+  "scenes": {
+    "idle": {
+      "frames": 602,
+      "callbacks": 1204,
+      "spanS": 10.02,
+      "meanFps": 60,
+      "p50Ms": 16.7,
+      "p90Ms": 16.7,
+      "p95Ms": 16.8,
+      "p99Ms": 16.8,
+      "maxMs": 17,
+      "over16": 149,
+      "over33": 0,
+      "over50": 0,
+      "over100": 0,
+      "droppedPct": 0,
+      "heapEndMb": 16,
+      "longtasks": null
+    },
+    "move": {
+      "frames": 3629,
+      "callbacks": 7258,
+      "spanS": 60.8,
+      "meanFps": 59.7,
+      "p50Ms": 16.7,
+      "p90Ms": 16.7,
+      "p95Ms": 16.8,
+      "p99Ms": 16.8,
+      "maxMs": 149.9,
+      "over16": 1245,
+      "over33": 5,
+      "over50": 2,
+      "over100": 2,
+      "droppedPct": 0.1,
+      "heapEndMb": 15,
+      "longtasks": {
+        "n": 3,
+        "ms": 358,
+        "over50": 3
+      }
+    }
+  },
+  "moveSamples": [
+    {
+      "tS": 1.2,
+      "world": 13,
+      "bag": 1,
+      "px": 722,
+      "py": 561
+    },
+    {
+      "tS": 6.1,
+      "world": 10,
+      "bag": 4,
+      "px": 732,
+      "py": 561
+    },
+    {
+      "tS": 11,
+      "world": 10,
+      "bag": 4,
+      "px": 732,
+      "py": 561
+    },
+    {
+      "tS": 15.9,
+      "world": 10,
+      "bag": 4,
+      "px": 732,
+      "py": 561
+    },
+    {
+      "tS": 20.7,
+      "world": 10,
+      "bag": 4,
+      "px": 734,
+      "py": 564
+    },
+    {
+      "tS": 25.6,
+      "world": 10,
+      "bag": 4,
+      "px": 736,
+      "py": 566
+    },
+    {
+      "tS": 30.5,
+      "world": 10,
+      "bag": 4,
+      "px": 736,
+      "py": 568
+    },
+    {
+      "tS": 35.3,
+      "world": 10,
+      "bag": 4,
+      "px": 734,
+      "py": 568
+    },
+    {
+      "tS": 40.2,
+      "world": 10,
+      "bag": 4,
+      "px": 739,
+      "py": 568
+    },
+    {
+      "tS": 45,
+      "world": 10,
+      "bag": 4,
+      "px": 736,
+      "py": 571
+    },
+    {
+      "tS": 46.2,
+      "world": 10,
+      "bag": 4,
+      "px": 907,
+      "py": 571
+    },
+    {
+      "tS": 51.1,
+      "world": 10,
+      "bag": 4,
+      "px": 909,
+      "py": 571
+    },
+    {
+      "tS": 55.9,
+      "world": 10,
+      "bag": 4,
+      "px": 909,
+      "py": 573
+    },
+    {
+      "tS": 60.8,
+      "world": 10,
+      "bag": 4,
+      "px": 909,
+      "py": 573
+    }
+  ],
+  "endState": {
+    "player": {
+      "x": 909.1540000000022,
+      "y": 575.2540000000062
+    },
+    "screen": "game"
+  },
+  "pageErrors": []
+}

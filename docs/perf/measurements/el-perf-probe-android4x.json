@@ -1,0 +1,345 @@
+{
+  "label": "android4x",
+  "url": "http://127.0.0.1:5176/",
+  "ua": "Mozilla/5.0 (Linux; Android 13; SM-A546B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Mobile Safari/537.36",
+  "viewport": "390x844 @ DPR2, isMobile+hasTouch",
+  "cpuThrottle": 4,
+  "measuredAt": "2026-10-21T03:33:04.901Z",
+  "load": {
+    "ttfbMs": 13,
+    "dclMs": 1436,
+    "loadMs": 1458,
+    "fcpMs": 1980,
+    "lcpMs": 1980,
+    "cls": 0,
+    "tbtMs": 838,
+    "longTaskCount": 2,
+    "requests": 64,
+    "transferBytes": 4398132,
+    "decodedBytes": 4378932,
+    "byType": {
+      "script": {
+        "n": 63,
+        "bytes": 4397813
+      },
+      "fetch": {
+        "n": 1,
+        "bytes": 319
+      }
+    },
+    "biggest": [
+      {
+        "name": "http://127.0.0.1:5176/node_modules/.vite/deps/chunk-BLE4GOYO.js?v=9bc0e0de",
+        "type": "script",
+        "bytes": 928783,
+        "ms": 17
+      },
+      {
+        "name": "http://127.0.0.1:5176/node_modules/.vite/deps/pixi__js.js?v=9d66f582",
+        "type": "script",
+        "bytes": 813351,
+        "ms": 15
+      },
+      {
+        "name": "http://127.0.0.1:5176/node_modules/.vite/deps/chunk-MPFL3ONO.js?v=9bc0e0de",
+        "type": "script",
+        "bytes": 240483,
+        "ms": 7
+      },
+      {
+        "name": "http://127.0.0.1:5176/node_modules/.vite/deps/chunk-YMDQKY7L.js?v=9bc0e0de",
+        "type": "script",
+        "bytes": 159416,
+        "ms": 3
+      },
+      {
+        "name": "http://127.0.0.1:5176/node_modules/.vite/deps/chunk-6JV4AP2P.js?v=9bc0e0de",
+        "type": "script",
+        "bytes": 151460,
+        "ms": 4
+      },
+      {
+        "name": "http://127.0.0.1:5176/node_modules/.vite/deps/chunk-HMQMDWGU.js?v=9bc0e0de",
+        "type": "script",
+        "bytes": 148848,
+        "ms": 4
+      },
+      {
+        "name": "http://127.0.0.1:5176/@vite/client",
+        "type": "script",
+        "bytes": 138452,
+        "ms": 10
+      },
+      {
+        "name": "http://127.0.0.1:5176/node_modules/.vite/deps/chunk-56UNLVE7.js?v=9bc0e0de",
+        "type": "script",
+        "bytes": 128674,
+        "ms": 4
+      },
+      {
+        "name": "http://127.0.0.1:5176/node_modules/.vite/deps/chunk-LHKO4TUN.js?v=9bc0e0de",
+        "type": "script",
+        "bytes": 118225,
+        "ms": 4
+      },
+      {
+        "name": "http://127.0.0.1:5176/@react-refresh",
+        "type": "script",
+        "bytes": 117848,
+        "ms": 9
+      },
+      {
+        "name": "http://127.0.0.1:5176/node_modules/.vite/deps/chunk-EYMSEIKR.js?v=9bc0e0de",
+        "type": "script",
+        "bytes": 111167,
+        "ms": 5
+      },
+      {
+        "name": "http://127.0.0.1:5176/node_modules/.vite/deps/chunk-3RR5FHBA.js?v=9bc0e0de",
+        "type": "script",
+        "bytes": 108103,
+        "ms": 4
+      },
+      {
+        "name": "http://127.0.0.1:5176/node_modules/.vite/deps/chunk-NH6YIUZV.js?v=9bc0e0de",
+        "type": "script",
+        "bytes": 100796,
+        "ms": 5
+      },
+      {
+        "name": "http://127.0.0.1:5176/node_modules/.vite/deps/chunk-RLDCJ42J.js?v=9bc0e0de",
+        "type": "script",
+        "bytes": 82516,
+        "ms": 4
+      },
+      {
+        "name": "http://127.0.0.1:5176/node_modules/.vite/deps/chunk-2YX7DZXR.js?v=9bc0e0de",
+        "type": "script",
+        "bytes": 78270,
+        "ms": 4
+      }
+    ],
+    "navWallMs": 2605
+  },
+  "gameEntry": {
+    "clickToCanvasMs": 791,
+    "clickToWorldLoopMs": 791,
+    "worldItems": 15,
+    "glRenderer": "ANGLE (Intel, Intel(R) Arc(TM) 130T GPU (15GB) (0x00007D51) Direct3D11 vs_5_0 ps_5_0, D3D11)"
+  },
+  "scenarios": {
+    "idle": {
+      "rafCallbacks": 1202,
+      "frames": 601,
+      "spanS": 10.02,
+      "meanFps": 59.9,
+      "p50Ms": 16.7,
+      "p90Ms": 16.7,
+      "p95Ms": 16.8,
+      "p99Ms": 16.8,
+      "maxMs": 33.3,
+      "over16": 186,
+      "over33": 1,
+      "over50": 0,
+      "over100": 0,
+      "droppedPct": 0.2,
+      "worstGaps": [
+        {
+          "atMs": 3845,
+          "gapMs": 33.3
+        },
+        {
+          "atMs": 9695,
+          "gapMs": 16.9
+        },
+        {
+          "atMs": 10861,
+          "gapMs": 16.9
+        },
+        {
+          "atMs": 10895,
+          "gapMs": 16.9
+        },
+        {
+          "atMs": 10961,
+          "gapMs": 16.9
+        }
+      ],
+      "longTasks": [],
+      "taskS": 2.643,
+      "scriptS": 1.033,
+      "layoutS": 0.032,
+      "styleS": 0.273,
+      "mainThreadBusyPct": 26.4,
+      "heapEndMB": 11
+    },
+    "move": {
+      "rafCallbacks": 7268,
+      "frames": 3634,
+      "spanS": 60.67,
+      "meanFps": 59.9,
+      "p50Ms": 16.7,
+      "p90Ms": 16.8,
+      "p95Ms": 16.8,
+      "p99Ms": 16.8,
+      "maxMs": 66.6,
+      "over16": 1240,
+      "over33": 4,
+      "over50": 1,
+      "over100": 0,
+      "droppedPct": 0.1,
+      "worstGaps": [
+        {
+          "atMs": 14411,
+          "gapMs": 66.6
+        },
+        {
+          "atMs": 17778,
+          "gapMs": 50
+        },
+        {
+          "atMs": 15528,
+          "gapMs": 33.4
+        },
+        {
+          "atMs": 16994,
+          "gapMs": 33.4
+        },
+        {
+          "atMs": 44128,
+          "gapMs": 17.1
+        }
+      ],
+      "longTasks": [
+        {
+          "atMs": 14345,
+          "ms": 67
+        },
+        {
+          "atMs": 17728,
+          "ms": 61
+        }
+      ],
+      "taskS": 16.307,
+      "scriptS": 7.005,
+      "layoutS": 0.11,
+      "styleS": 1.152,
+      "mainThreadBusyPct": 26.9,
+      "heapEndMB": 11
+    },
+    "ui": {
+      "rafCallbacks": 870,
+      "frames": 435,
+      "spanS": 7.32,
+      "meanFps": 59.3,
+      "p50Ms": 16.7,
+      "p90Ms": 16.7,
+      "p95Ms": 16.8,
+      "p99Ms": 16.8,
+      "maxMs": 66.7,
+      "over16": 101,
+      "over33": 2,
+      "over50": 1,
+      "over100": 0,
+      "droppedPct": 0.5,
+      "worstGaps": [
+        {
+          "atMs": 74694,
+          "gapMs": 66.7
+        },
+        {
+          "atMs": 74594,
+          "gapMs": 33.3
+        },
+        {
+          "atMs": 75377,
+          "gapMs": 33.2
+        },
+        {
+          "atMs": 79660,
+          "gapMs": 16.9
+        },
+        {
+          "atMs": 74627,
+          "gapMs": 16.8
+        }
+      ],
+      "longTasks": [],
+      "taskS": 2.686,
+      "scriptS": 0.818,
+      "layoutS": 0.027,
+      "styleS": 0.26,
+      "mainThreadBusyPct": 36.7,
+      "heapEndMB": 11
+    }
+  },
+  "endState": {
+    "player": {
+      "x": 897.2819999999981,
+      "y": 551.9439999999987
+    },
+    "screen": "game"
+  },
+  "pageErrors": [],
+  "framesTotal": 9348,
+  "framesBoot": {
+    "rafCallbacks": 8,
+    "frames": 4,
+    "spanS": 0.45,
+    "meanFps": 6.7,
+    "p50Ms": 149.9,
+    "p90Ms": 233.5,
+    "p95Ms": 233.5,
+    "p99Ms": 233.5,
+    "maxMs": 233.5,
+    "over16": 3,
+    "over33": 3,
+    "over50": 3,
+    "over100": 2,
+    "droppedPct": 100,
+    "worstGaps": [
+      {
+        "atMs": 3528,
+        "gapMs": 233.5
+      },
+      {
+        "atMs": 3678,
+        "gapMs": 149.9
+      },
+      {
+        "atMs": 3744,
+        "gapMs": 66.6
+      }
+    ],
+    "longTasks": [
+      {
+        "atMs": 610,
+        "ms": 834
+      },
+      {
+        "atMs": 1460,
+        "ms": 104
+      },
+      {
+        "atMs": 2640,
+        "ms": 134
+      },
+      {
+        "atMs": 2837,
+        "ms": 449
+      },
+      {
+        "atMs": 3310,
+        "ms": 224
+      },
+      {
+        "atMs": 3534,
+        "ms": 53
+      },
+      {
+        "atMs": 3635,
+        "ms": 56
+      }
+    ]
+  }
+}

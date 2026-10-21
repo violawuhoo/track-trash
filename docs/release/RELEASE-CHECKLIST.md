@@ -1,7 +1,9 @@
 # 《好垃》v2 上线检查清单（RELEASE-CHECKLIST）
 
 - **版本**：v2.0.0（开放世界改造首发）
-- **基线 commit**：`5882d30`（本地 main 与 origin/main 一致）
+- **基线 commit**：`5882d30`（质量门验证点：CI 全绿 / 60 用例 / check-content / check-assets / api 9-9 / T10-R2 性能门均在此核验）
+- **main 现状**：`7a68739`（5882d30 之后四连**文档** commit：`ea06137` 发布物料 + `21c5e4d` B4/C0 + `b56f845` 性能报告合并版 + `7a68739` A8 gzip 口径，无代码变更，已全部推送）
+- **发布前注意**：QW1/QW2 代码修复 commit 待入（工程侧实现中，过严守真回归后提交）；该 commit 触及 `apps/web/**` 会触发 deploy-web。**C/D 组验证以最终 shipping commit 的成功部署为准**，不以中间 commit 为准
 - **清单建立日**：2026-10-21
 - **当前门判定**：🔴 **NO-GO** —— 阻塞项 **B1（GitHub Pages 站点未创建）** 未清，见 §B。
 

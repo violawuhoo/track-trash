@@ -30,6 +30,41 @@ export interface SearchHint {
   itemId: string;
 }
 
+/**
+ * 缺标签 → 去哪找。**v2 的活路径**。
+ *
+ * v2 没有「搜索」按钮：物品固定铺在地面（`save.world`），走近自动拾取，
+ * 区域由角色坐标推导。所以 v1 的 `searchArea` / `pickSearch` 在 web 端没有入口，
+ * **玩家看不到任何跨区域提示**——唯一显示缺标签的地方是 `apps/web/src/components/HintBar.tsx`。
+ *
+ * 这个函数就是给 HintBar 用的：它不关心玩家当前站在哪个区域（v2 没有 areaId 概念），
+ * 只回答「这个标签在哪个区域、具体是哪件东西」，玩家自己跑腿。
+ *
+ * 语义：
+ * - 对当前步骤还缺的每个标签，在**已解锁区域并集**里找带该标签的物品；
+ * - 找不到 → 不返回该项（内容配置错误，另由 `check-content.mjs` 断言 B 兜底）；
+ * - 纯函数、确定性输出（固定取区域顺序里的第一个命中区域 + 该区域第一个命中物品），
+ *   这样前端可以安全地 `useMemo` 缓存。
+ */
+export function missingAreaHints(
+  progress: Progress,
+  bag: Record<string, number>,
+): SearchHint[] {
+  const needs = missingForBag(progress, bag);
+  const hints: SearchHint[] = [];
+  for (const tag of needs) {
+    for (const area of unlockedAreas(progress)) {
+      const ids = (AREA_POOLS[area] ?? []).filter((id) =>
+        ITEM_MAP[id]?.tags.includes(tag),
+      );
+      if (ids.length === 0) continue;
+      hints.push({ tag, areaId: area, itemId: ids[0]! });
+      break;
+    }
+  }
+  return hints;
+}
+
 /** 一次搜索的完整结果 */
 export interface SearchOutcome {
   /** 本次搜索得到的物品 id（全部属于当前区域池） */
@@ -85,6 +120,10 @@ export function missingForBag(
 /**
  * 搜索一个区域，返回 1~2 个物品 id + 跨区域提示。
  *
+ * ⚠️ **v1 遗留 API，v2 的 web 端没有调用方**（v2 删掉了「搜索」按钮，物品固定铺在地面）。
+ * 玩家在 v2 里看不到这个函数产生的任何东西。
+ * v2 的活路径是 {@link missingAreaHints} → `apps/web/src/components/HintBar.tsx`。
+ *
  * 硬保底：当前步骤缺的标签，只要该区域池里存在对应物品，就必定刷出来。
  * 这不是「提高概率」—— 概率保底迟早会被玩家撞上死路，这里是确定性补齐。
  * 上限 2 个：一次搜索最多给两个，否则节奏会被保底拖垮。
@@ -123,11 +162,14 @@ export function pickSearchWithHints(opts: SearchOptions): SearchOutcome {
 }
 
 /**
- * 跨区域并集提示。
+ * 跨区域并集提示（v1 搜索路径专用）。
  *
  * 对每个还缺的标签：当前区域池里没有 → 在其他已解锁区域里找一个带该标签的物品，
  * 返回「去 X 区域找 Y」。全星球都没有该标签 → 不给提示（内容配置错误，由
  * `check-content.mjs` 断言 B 兜住）。
+ *
+ * ⚠️ 仅服务于 {@link pickSearchWithHints}（v1 遗留，web 端无调用方）。
+ * v2 的活路径见 {@link missingAreaHints}。
  */
 function hintsForMissing(
   needs: Tag[],

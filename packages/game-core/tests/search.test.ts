@@ -3,6 +3,7 @@ import {
   AREA_POOLS,
   STAGES,
   getItem,
+  missingAreaHints,
   missingForBag,
   pickSearch,
   pickSearchWithHints,
@@ -157,5 +158,69 @@ describe('搜索与硬保底', () => {
       'market',
       'cave',
     ]);
+  });
+});
+
+describe('跨区域指路（v2 活路径 · HintBar 用）', () => {
+  it('缺标签 → 给出「在哪个区域、具体是哪件物品」', () => {
+    // 阶段 3 第 1 步要「金属」。金属只在 crash / junkyard 的池子里。
+    withStage3Steps([{ id: 's3-tmp', requires: ['金属'], output: 'bracket' }], () => {
+      const hints = missingAreaHints({ stage: 3, stepIndex: 0 }, {});
+      expect(hints).toHaveLength(1);
+      const h = hints[0]!;
+      expect(h.tag).toBe('金属');
+      // 区域必须在已解锁并集里
+      expect(unlockedAreas({ stage: 3, stepIndex: 0 })).toContain(h.areaId);
+      // 该区域池里确实有这件物品，且它带这个标签
+      expect(AREA_POOLS[h.areaId]).toContain(h.itemId);
+      expect(getItem(h.itemId).tags).toContain('金属');
+    });
+  });
+
+  it('多个缺标签 → 每个标签各给一条', () => {
+    withStage3Steps(
+      [{ id: 's3-tmp', requires: ['金属', '外星'], output: 'bracket' }],
+      () => {
+        const hints = missingAreaHints({ stage: 3, stepIndex: 0 }, {});
+        expect(hints.map((h) => h.tag)).toEqual(['金属', '外星']);
+        for (const h of hints) {
+          expect(AREA_POOLS[h.areaId]).toContain(h.itemId);
+          expect(getItem(h.itemId).tags).toContain(h.tag);
+        }
+      },
+    );
+  });
+
+  it('背包里已有的标签不再提示', () => {
+    withStage3Steps([{ id: 's3-tmp', requires: ['金属'], output: 'bracket' }], () => {
+      // 背包里有一件带金属的东西（screw = 实体 + 金属）
+      const hints = missingAreaHints({ stage: 3, stepIndex: 0 }, { screw: 1 });
+      expect(hints).toEqual([]);
+    });
+  });
+
+  it('走满阶段 3 后不再有缺标签，也没有提示', () => {
+    withStage3Steps(
+      [
+        { id: 's3-1', requires: ['金属'], output: 'bracket' },
+        { id: 's3-2', requires: ['外星'], output: 'signal' },
+      ],
+      () => {
+        expect(missingAreaHints({ stage: 3, stepIndex: 2 }, {})).toEqual([]);
+      },
+    );
+  });
+
+  it('阶段 1 只在已解锁区域里找（junkyard 还没解锁，不能指路到垃圾山）', () => {
+    // 阶段 1 第 1 步要「导电 + 粘」，两个都缺。
+    const hints = missingAreaHints({ stage: 1, stepIndex: 0 }, {});
+    expect(hints.map((h) => h.tag)).toEqual(['导电', '粘']);
+    // 阶段 1 的已解锁区域只有 crash
+    expect(unlockedAreas({ stage: 1, stepIndex: 0 })).toEqual(['crash']);
+    for (const h of hints) {
+      expect(h.areaId).toBe('crash');
+      expect(AREA_POOLS.crash).toContain(h.itemId);
+      expect(getItem(h.itemId).tags).toContain(h.tag);
+    }
   });
 });

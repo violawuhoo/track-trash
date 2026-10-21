@@ -182,7 +182,14 @@ function readSavedGame(): SaveStateV2 | null {
       world.push(it);
     }
 
-    return { ...(parsed as SaveStateV2), world, tutorial: readTutorial(parsed.tutorial) };
+    return {
+      ...(parsed as SaveStateV2),
+      world,
+      tutorial: readTutorial(parsed.tutorial),
+      // 归一化：老存档（A1a 之前写入的）没有 buildDone 字段 → 一律 false。
+      // 不 bump schemaVersion，走 T7 `tutorial` 的同款先例（入存档但不迁移）。
+      buildDone: parsed.buildDone === true,
+    };
   } catch {
     return null;
   }

@@ -50,6 +50,7 @@ export {
 } from './resolve';
 export {
   bagHasTag,
+  missingAreaHints,
   missingForBag,
   pickSearch,
   pickSearchWithHints,

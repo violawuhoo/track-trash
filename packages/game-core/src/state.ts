@@ -80,7 +80,13 @@ export function hasPair(
   return (bag[a] ?? 0) >= 1 && (bag[b] ?? 0) >= 1;
 }
 
-/** 搜索区域：+1 天，重刷场景 */
+/**
+ * 搜索区域：+1 天，重刷场景。
+ *
+ * ⚠️ **v1 遗留 API，v2 的 web 端没有调用方**（v2 删掉了「搜索」按钮，物品固定铺在地面）。
+ * 这里的跨区域 hint 日志玩家在 v2 里看不到。
+ * v2 的活路径是 `missingAreaHints` → `apps/web/src/components/HintBar.tsx`。
+ */
 export function searchArea(
   state: SaveState,
   rng: () => number = Math.random,
@@ -401,6 +407,9 @@ export function availableEndings(state: SaveState): EndingId[] {
     if (state.branches[b.id] && b.id !== 'ship') out.push(b.ending);
   }
   if (launchCheck(state.bag) !== 'none') out.push('leave');
+  // TODO(A2): 这里无条件 push('free')，stage 1 就能选「自由模式」结局。
+  // GDD 拍板第 2 条：「自由模式」应当 stage ≥ 2 起随时可选、且永久可选。
+  // 归 A2 批次修（A1a 不动）。
   out.push('free');
   return out;
 }

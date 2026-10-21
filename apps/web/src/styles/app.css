@@ -448,6 +448,19 @@ button:focus:not(:focus-visible) {
   margin-top: var(--sp-2);
 }
 
+/* 跨区域指路：缺的东西在哪个区域、具体是哪一件 */
+.hint__where-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  margin-top: var(--sp-2);
+}
+
+.hint__where {
+  color: var(--ink-soft);
+  line-height: var(--lh-body);
+}
+
 /* ═══════════════════ T7 引导条 ═══════════════════ */
 
 .tutor {

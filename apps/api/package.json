@@ -9,7 +9,7 @@
     "start": "node dist/index.js",
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run",
+    "test": "node ../../scripts/run-tests.mjs --min-tests 25 --min-files 2",
     "db:push": "drizzle-kit push"
   },
   "dependencies": {

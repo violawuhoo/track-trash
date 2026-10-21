@@ -11,6 +11,8 @@ coverage/
 .vite/
 .workbuddy/
 doc.json
+# 本地 SQLite 存档（T8），不入库
+apps/api/data/
 
 shots/
 .chrome-tmp/

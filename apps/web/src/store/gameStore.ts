@@ -45,6 +45,7 @@ import {
   type SaveState,
   type Vec2,
 } from '@haola/game-core';
+import { cancelPendingPush, clearCloudSave, progressScoreOf, pullSave, queuePush } from '../lib/cloud';
 
 const KEY = 'haola.save.v2';
 
@@ -300,6 +301,8 @@ interface GameStore {
 
   backToStart: () => void;
   resetAll: () => void;
+  /** T8：启动时从云端拉取并合并（progressScore 高者胜），全程静默 */
+  syncFromCloud: () => void;
 }
 
 /** 出生点：坠毁点圆心（契约：刷新后角色回到坠毁点） */
@@ -311,6 +314,8 @@ export const useGame = create<GameStore>((set, get) => {
   /** 统一的写入 + 持久化。`world` 镜像跟着一起更新 */
   const commit = (save: SaveStateV2, extra: Partial<GameStore> = {}) => {
     persist(save);
+    // 后台防抖推云端；失败静默（离线优先，不打断游玩）
+    queuePush(save);
     set({ save, world: save.world, ...extra });
   };
 
@@ -338,6 +343,11 @@ export const useGame = create<GameStore>((set, get) => {
       const world = redistribute(fromCore(base, [], TUTORIAL_SKIP), spawn, DEFAULT_MAX_DIST);
       const save: SaveStateV2 = fromCore(base, world, { step: 'newcomer', picks: 0 });
       persist(save);
+      // 开始页「重新开始」同时丢弃云端旧档。否则按「高分不败」的冲突规则，
+      // 新档永远赢不过云端旧档，下次启动会被原样覆盖回来 —— 等于新游戏开不起来。
+      cancelPendingPush();
+      void clearCloudSave();
+      queuePush(save);
       set({
         save,
         world,
@@ -648,29 +658,73 @@ export const useGame = create<GameStore>((set, get) => {
 
     backToStart: () => set({ screen: 'start', dialog: [], dialogIndex: 0 }),
 
+    syncFromCloud: () => {
+      // 启动时后台执行；任何异常都吞掉，绝不阻塞开始页
+      pullSave()
+        .then((remote) => {
+          // 拉取往返期间玩家可能已经开局（或读档）了。此时任何采纳都会踩掉他正在玩的东西。
+          if (get().screen !== 'start') return;
+          const local = readSavedGame();
+          if (!remote) {
+            // 云端无档：本地有则推上去，统一两端
+            if (local) queuePush(local);
+            return;
+          }
+          if (!local) {
+            // 仅云端有：写回本地并采纳
+            persist(remote);
+            const normalized = readSavedGame();
+            if (normalized) {
+              set({ save: normalized, world: normalized.world });
+              get().showToast('已从云端同步');
+            }
+            return;
+          }
+          // 两端都有：progressScore 高者胜（相等保留本地）
+          const remoteScore = progressScoreOf(remote);
+          const localScore = progressScoreOf(local);
+          if (remoteScore > localScore) {
+            persist(remote);
+            const normalized = readSavedGame();
+            if (normalized) {
+              set({ save: normalized, world: normalized.world });
+              get().showToast('已从云端同步');
+            }
+          } else if (localScore > remoteScore) {
+            queuePush(local);
+          }
+        })
+        .catch(() => {
+          /* 静默降级 */
+        });
+    },
+
     resetAll: () => {
       try {
         localStorage.removeItem(KEY);
       } catch {
         /* ignore */
       }
+      // 先掐掉待发的推送，再清云端（否则旧存档会被防抖队列重新推回去）
+      cancelPendingPush();
+      void clearCloudSave();
       const spawn = spawnPoint();
-  set({
-    save: fromCore(createInitialState(), [], TUTORIAL_SKIP),
-    world: [],
-    screen: 'start',
-    slots: [null, null],
-    dialog: [],
-    dialogIndex: 0,
-    toast: null,
-    viewing: null,
-    bagOpen: false,
-    tutorFlags: { wrong: false, blocked: false },
-    player: spawn,
-    spawn,
-    moveTarget: null,
-    zoom: 1,
-  });
+      set({
+        save: fromCore(createInitialState(), [], TUTORIAL_SKIP),
+        world: [],
+        screen: 'start',
+        slots: [null, null],
+        dialog: [],
+        dialogIndex: 0,
+        toast: null,
+        viewing: null,
+        bagOpen: false,
+        tutorFlags: { wrong: false, blocked: false },
+        player: spawn,
+        spawn,
+        moveTarget: null,
+        zoom: 1,
+      });
     },
   };
 });

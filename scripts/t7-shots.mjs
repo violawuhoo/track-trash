@@ -41,7 +41,11 @@ const page = await browser.newPage({
 const errors = [];
 page.on('pageerror', (e) => errors.push(`pageerror: ${e.message}`));
 page.on('console', (m) => {
-  if (m.type() === 'error') errors.push(m.text());
+  if (m.type() !== 'error') return;
+  // T8 之后前端启动会拉云档，无存档时 GET 返回 404（SPEC 规定），
+  // 浏览器会把它记成 console error。网络层噪声不算前端缺陷，真实异常走 pageerror。
+  if (/Failed to load resource/i.test(m.text())) return;
+  errors.push(m.text());
 });
 
 const store = () => page.evaluate(() => window.__haola.getState());

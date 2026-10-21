@@ -3,7 +3,9 @@ import { hasSavedGame, useGame } from '../store/gameStore';
 export function StartScreen() {
   const newGame = useGame((s) => s.newGame);
   const continueGame = useGame((s) => s.continueGame);
-  const saved = hasSavedGame();
+  // 订阅到 store 上，云档拉回本地（T8）后能立刻出现「继续游戏」。
+  // 直接调 hasSavedGame() 只在渲染时读一次 localStorage，拉取完成不会重渲染。
+  const saved = useGame(() => hasSavedGame());
 
   return (
     <div className="start">

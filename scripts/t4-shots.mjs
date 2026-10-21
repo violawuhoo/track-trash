@@ -80,7 +80,10 @@ const page = await browser.newPage({
 const errors = [];
 page.on('pageerror', (e) => errors.push(`pageerror: ${e.message}`));
 page.on('console', (m) => {
-  if (m.type() === 'error') errors.push(m.text());
+  if (m.type() !== 'error') return;
+  // T8 起前端启动会拉云档，无存档时 404 是 SPEC 规定的正常应答（网络层噪声）
+  if (/Failed to load resource/i.test(m.text())) return;
+  errors.push(m.text());
 });
 
 await page.goto(BASE, { waitUntil: 'networkidle' });

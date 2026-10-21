@@ -5,8 +5,11 @@ import {
   ITEM_MAP,
   STAGES,
   WORLD,
+  addItem,
   areaOfPoint,
   clampToWalkable,
+  craft,
+  createInitialState,
   distribute,
   isWalkable,
   sectorCenter,
@@ -491,32 +494,40 @@ function assertSize(size: number, seed: number, when: string): void {
 
 /**
  * 贪心策略：缺什么就去地上拿什么，凑齐当前步骤就合成。
- * 全程不用深拷贝，循环里只做最省分配的判断。
+ *
+ * ⚠️ 本函数**走真实的 core `craft()`**（不是手搓背包账），所以阶段推进、
+ * 阶段 3 的 buildDone / clear3 / ks_build 全都经过真实代码路径。
+ * v2 之前这里只跑到阶段 2（`while (stage < 3)`），阶段 3 的三步完全在模拟范围之外。
  */
 function simulate(seed: number): SimResult {
   const rng = mulberry32(seed);
-  const bag: Record<string, number> = {};
-  let stage: 1 | 2 | 3 = 1;
-  let stepIndex = 0;
-  let day = 1;
+  let state = createInitialState();
   let player: Vec2 = { x: WORLD.center.x, y: WORLD.center.y };
-  let world = distribute({ progress: { stage, stepIndex }, bag, day, rng, player });
+  let world = distribute({
+    progress: { stage: state.stage, stepIndex: state.stepIndex },
+    bag: state.bag,
+    day: state.day,
+    rng,
+    player,
+  });
   assertSize(world.length, seed, '初始');
 
   let crafts = 0;
   let collections = 0;
   let guard = 0;
+  let sawClear3 = false;
 
-  while (stage < 3) {
-    if (++guard > 400) throw new Error(`seed ${seed}: 迭代次数超限`);
+  // 阶段 1+2+3 共 9 步 → 走满后 buildDone
+  while (!(state.stage === 3 && state.buildDone)) {
+    if (++guard > 600) throw new Error(`seed ${seed}: 迭代次数超限`);
 
-    const def = STAGES[stage - 1]!;
-    const step = def.steps[stepIndex]!;
+    const def = STAGES[state.stage - 1]!;
+    const step = def.steps[state.stepIndex]!;
     const r0 = step.requires[0]!;
     const r1 = step.requires[step.requires.length - 1]!;
 
     const ids: string[] = [];
-    for (const id in bag) if ((bag[id] ?? 0) > 0) ids.push(id);
+    for (const id in state.bag) if ((state.bag[id] ?? 0) > 0) ids.push(id);
 
     let rep0: string | undefined;
     let rep1: string | undefined;
@@ -532,7 +543,7 @@ function simulate(seed: number): SimResult {
       if (rep0 !== rep1) {
         a = rep0;
         b = rep1;
-      } else if ((bag[rep0] ?? 0) >= 2) {
+      } else if ((state.bag[rep0] ?? 0) >= 2) {
         a = rep0;
         b = rep0;
       } else {
@@ -547,21 +558,34 @@ function simulate(seed: number): SimResult {
     }
 
     if (a !== undefined && b !== undefined) {
-      bag[a] = (bag[a] ?? 0) - 1;
-      bag[b] = (bag[b] ?? 0) - 1;
-      bag[step.output] = (bag[step.output] ?? 0) + 1;
+      // 走真实 craft：阶段推进 / buildDone / 纪念品 / 结局全在 core 里
+      const res = craft(state, a, b);
+      if (!res.ok) throw new Error(`seed ${seed}: craft(${a},${b}) 失败：${res.reason}`);
+      if (res.outcome.result.kind !== 'stage') {
+        throw new Error(
+          `seed ${seed}: 阶段 ${state.stage} 第 ${state.stepIndex} 步的组合没有命中阶段目标`,
+        );
+      }
+      state = res.state;
       crafts++;
 
-      stepIndex++;
-      if (stepIndex >= def.steps.length) {
-        stage = (stage + 1) as 1 | 2 | 3;
-        stepIndex = 0;
+      if (res.dialogueKey === 'clear3') {
+        sawClear3 = true;
+        if (!state.buildDone) throw new Error(`seed ${seed}: clear3 时 buildDone 不为 true`);
+        if (!state.keepsakes.includes('ks_build')) {
+          throw new Error(`seed ${seed}: clear3 时未发放 ks_build`);
+        }
       }
-      day++;
-      if (stage < 3) {
-        world = distribute({ progress: { stage, stepIndex }, bag, day, rng, player });
-        assertSize(world.length, seed, `阶段 ${stage} 第 ${stepIndex} 步刷新后`);
-      }
+
+      // 合成 → +1 天 → 重刷地面（与 web 端同款时序）
+      world = distribute({
+        progress: { stage: state.stage, stepIndex: state.stepIndex },
+        bag: state.bag,
+        day: state.day,
+        rng,
+        player,
+      });
+      assertSize(world.length, seed, `阶段 ${state.stage} 第 ${state.stepIndex} 步刷新后`);
       continue;
     }
 
@@ -583,25 +607,30 @@ function simulate(seed: number): SimResult {
     }
     if (pick < 0) {
       throw new Error(
-        `seed ${seed}: 阶段 ${stage} 第 ${stepIndex} 步，地面没有${
+        `seed ${seed}: 阶段 ${state.stage} 第 ${state.stepIndex} 步，地面没有${
           needTag === null ? '可用的' : `带「${needTag}」的`
         }可推进物品`,
       );
     }
 
     const target = world[pick]!;
-    bag[target.id] = (bag[target.id] ?? 0) + 1;
+    state = { ...state, bag: addItem(state.bag, target.id) };
     player = { x: target.x, y: target.y };
     world.splice(pick, 1);
     collections++;
   }
+
+  // 收尾断言：阶段 3 走满的完整形态
+  if (!sawClear3) throw new Error(`seed ${seed}: 未观察到 clear3 播报`);
+  if (state.stage !== 3) throw new Error(`seed ${seed}: 结束时 stage 不是 3`);
+  if (state.stepIndex !== 3) throw new Error(`seed ${seed}: 结束时 stepIndex 不是 3`);
 
   return { crafts, collections };
 }
 
 describe('10 万次随机游玩模拟', () => {
   it(
-    '贪心策略 100% 通关，且任何时刻地面都存在可推进物品',
+    '贪心策略 100% 通关（阶段 1+2+3 共 9 步），且任何时刻地面都存在可推进物品',
     () => {
       const failures: string[] = [];
       let maxCrafts = 0;
@@ -617,8 +646,8 @@ describe('10 万次随机游玩模拟', () => {
       }
 
       expect(failures).toEqual([]);
-      // 阶段 1、2 共 6 步，正常 6 次合成通关
-      expect(maxCrafts).toBe(6);
+      // 阶段 1、2、3 共 9 步，正常 9 次合成通关（每步恰好一次）
+      expect(maxCrafts).toBe(9);
     },
     120000,
   );

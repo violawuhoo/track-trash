@@ -91,6 +91,8 @@ pnpm --filter @haola/web typecheck
 8. **内容校验用 `node scripts/check-content.mjs`**（T6 用）。零依赖，正则读 TS 源码，**不要改成 import game-core**（TS 没有运行时，加 esbuild 就破坏零依赖约定）。配方对象**没有 `id` 字段**（写法是 `{ a, b, out }`），所以它靠 `a` 定位对象。
 9. **`kind: 'accident'` 与 `'keepsake'` 不进配方表是设计使然**，别当孤立物品去"修"——`check-content.mjs` 已把它们排除在断言 A 之外。
 10. **MSYS 会把 `/` 开头的构建参数静默改道路径**（T10-R3 实测）：Git Bash 下 `--base=/` 和 `VITE_BASE=/ pnpm ...` 都会被 MSYS 转成 `/f/LenovoSoftstore/.../PortableGit` 之类路径，产物 `index.html` 的 asset 引用全 404（部署即白屏），且**构建输出毫无异常**（vite 只提示 base 应以 / 开头），比显式设错 base 更隐蔽。判识：本地产物引用含 `PortableGit` 或任何非 `/track-trash/assets/` 前缀即为误构建。可靠姿势：PowerShell 下调 `vite.CMD`，或 Git Bash 设 `MSYS2_ARG_CONV_EXCL='*'`。
+11. **用 `__haola.setState` 灌背包做探针/测试时，物品 id 必须是真实 id**（T10-R2 实测）：见 `packages/game-core/src/items.ts`（如 `tape`/`wrench`/`manual`/`battery`）。用图标名（如 `ticket`）会让 `getItem` 抛「未知物品 id」，把整个 React 树崩掉。
+12. **prod 跑 perf-probe 出现「地面物品 -1 / 角色终点 null」是探针伪影，不是回归**（T10-R2 实测）：`window.__haola` 仅 DEV 定义，prod 构建里取不到 store。修复前后基线相同，别当回归报。
 
 ### 视觉验收怎么做（不能只信测试）
 

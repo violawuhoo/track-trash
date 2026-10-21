@@ -41,6 +41,31 @@ export type EndingId = 'leave' | 'teashop' | 'birthday' | 'stay' | 'free';
 
 export type BranchId = 'ship' | 'teashop' | 'birthday' | 'stay';
 
+/**
+ * 二周目档案容器（GDD §7.3）。
+ *
+ * C2 批次把 A2 落的布尔语义位 `ngPlus: boolean` 扩成这个对象容器。
+ * **不 bump `schemaVersion`**（web `SAVE_SCHEMA = 2`，bump 即丢弃全部现存存档）。
+ *
+ * 四个字段的语义：
+ * - `cycle`：周目数。1 = 一周目，2 = 二周目。`ngPlus.cycle += 1` 即开新周目。
+ * - `endings`：已解锁结局集合（去重）—— 图鉴「结局」栏 5 格的数据源。
+ * - `readLogs`：跨周目已读日志 id 集合（去重）—— 二周目里「读过就不再重复解锁」。
+ * - `branchesHistory`：曾经完成过的支线（去重）—— 二周目支线面板标「上次走过」。
+ *
+ * 归一化见 `normalizeNgPlus()`（core 纯函数 + web 读档共用同一份）。
+ */
+export interface NgPlusState {
+  /** 周目数。1 = 一周目 */
+  cycle: number;
+  /** 已解锁结局 id 集合 */
+  endings: EndingId[];
+  /** 跨周目已读日志 id 集合 */
+  readLogs: string[];
+  /** 曾经完成过的支线 id 集合 */
+  branchesHistory: BranchId[];
+}
+
 /** 贴纸配色，只允许有限色盘 */
 export type StickerColor = 'orange' | 'mint' | 'purple' | 'pink' | 'yellow';
 
@@ -157,16 +182,20 @@ export interface SaveState {
    */
   buildDone: boolean;
   /**
-   * 二周目是否已解锁（A2 批次）。
+   * 二周目档案容器（C2 批次）。
    *
-   * GDD §7.3 把 `ngPlus` 定义为对象容器（cycle / endings / readLogs / branchesHistory），
-   * 但本批次只落**布尔语义位**：二周目的完整档案容器属于 C2 批次。
-   * 这里只保证「字段入类型 + 读档归一化」这条先例成立，且不 bump schemaVersion。
+   * A2 批次在这里落的是布尔语义位 `ngPlus: boolean`；C2 扩成 GDD §7.3 的
+   * `NgPlusState` 对象容器（cycle / endings / readLogs / branchesHistory）。
    *
-   * ⚠️ C2 批次把它扩成 `NgPlusState` 时，老存档里这个 `true` 需要被当作
-   * 「cycle ≥ 2 的空档案」来归一化 —— 迁移点记在 C2 的任务书里。
+   * ⚠️ **迁移点（已兑现）**：老存档里那个 `true` 会被当作「`cycle >= 2` 的空档案」
+   * 归一化 —— 即 `cycle: 2` + 三个空数组。语义位为 `true` 说明玩家已经完成过
+   * 至少一周目，所以周目数从 2 起算（这样二周目入口条件
+   * `cycle >= 1 && endings.length >= 1` 仍然成立，但档案本身是空的）。
+   *
+   * **不 bump `schemaVersion`**：按 T7 `tutorial` / A1a `buildDone` / A2 `ngPlus` /
+   * C1 `crafts`+`logsFound` 的先例，读档时归一化。
    */
-  ngPlus: boolean;
+  ngPlus: NgPlusState;
   /**
    * 累计合成次数（C1 批次）。
    *

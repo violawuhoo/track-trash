@@ -57,8 +57,20 @@ export interface LogProgress {
   stage: 1 | 2 | 3 | 4;
   /** 建设期三步是否走满 */
   buildDone: boolean;
-  /** 已获得的日志 id 集合 */
+  /** 已获得的日志 id 集合（**本周目**） */
   logsFound: string[];
+  /**
+   * 跨周目的已读日志 id 集合（`ngPlus.readLogs`，C2 批次）。
+   *
+   * 可选：web 端传 `save.ngPlus.readLogs`。不传就退化成「只看本周目」的老行为。
+   *
+   * 语义差异（别混淆）：
+   * - `logsFound` = **本周目**合出过哪些载体（`craft()` 时记，会被清零）
+   * - `readLogs`  = **这辈子**读过哪些篇目（跨周目保留）
+   *
+   * GDD §7.1 G1：已读篇目在二周目**不再重复给解锁演出** —— 读过就记得。
+   */
+  readLogs?: string[];
 }
 
 /** 一篇前任日志 */
@@ -143,7 +155,7 @@ export const LOGS: readonly LogDoc[] = Object.freeze([
     recordDay: '第 8–11 天',
     unlock: { day: 12 },
     unlockHint: '第 12 天之后',
-    playerView: '「值班记录，一天一段」',
+    playerView: '「一天一段的册子」',
     paragraphs: [
       '值班记录，一天一段。我写给以后可能翻这本册子的人看。',
       '第 1–6 天：照常。修信号器，捡零件，记天气——这里没有天气，我记的是石头唱歌的次数。惯例是每天 11 遍。多一遍算异常。',
@@ -281,9 +293,27 @@ export function carrierFound(log: LogDoc, state: LogProgress): boolean {
   return state.logsFound.includes(log.id);
 }
 
-/** 玩家当前可以读的日志（条件满足 + 载体已获得），按阅读顺序 */
+/**
+ * 这篇日志是否在**之前的周目**里已经读过（C2 批次 · `ngPlus.readLogs`）。
+ *
+ * 跨周目的「读过就记得」：内容不重复解锁、不重复给演出（GDD §7.1 G1）。
+ */
+export function alreadyRead(log: LogDoc, state: LogProgress): boolean {
+  return (state.readLogs ?? []).includes(log.id);
+}
+
+/**
+ * 玩家当前可以读的日志，按阅读顺序。
+ *
+ * 两种可读来源：
+ * 1. **本周目**合出了载体 + 解锁条件满足 → 正常读。
+ * 2. **之前的周目**读过（`readLogs`）→ 直接可读，不重复解锁、不重复演出。
+ */
 export function readableLogs(state: LogProgress): LogDoc[] {
-  return LOGS.filter((l) => logUnlocked(l, state) && carrierFound(l, state));
+  return LOGS.filter(
+    (l) =>
+      (logUnlocked(l, state) && carrierFound(l, state)) || alreadyRead(l, state),
+  );
 }
 
 /**
@@ -295,7 +325,10 @@ export function readableLogs(state: LogProgress): LogDoc[] {
  * - `pendingLogs`  → locked（条件没到，标题都还锁着）
  */
 export function waitingLogs(state: LogProgress): LogDoc[] {
-  return LOGS.filter((l) => logUnlocked(l, state) && !carrierFound(l, state));
+  return LOGS.filter(
+    (l) =>
+      !alreadyRead(l, state) && logUnlocked(l, state) && !carrierFound(l, state),
+  );
 }
 
 /**
@@ -306,5 +339,5 @@ export function waitingLogs(state: LogProgress): LogDoc[] {
  * 无论载体在不在背包里）。
  */
 export function pendingLogs(state: LogProgress): LogDoc[] {
-  return LOGS.filter((l) => !logUnlocked(l, state));
+  return LOGS.filter((l) => !alreadyRead(l, state) && !logUnlocked(l, state));
 }

@@ -2,6 +2,7 @@ import { ITEM_MAP, getItem } from './items';
 import { ENDING_LINES, lines, missingLine, type DialogueKey } from './dialogue';
 import { launchCheck, rollLaunch, allBranchStatus } from './launch';
 import { CARRIER_TO_LOG } from './logs';
+import { createNgPlus, recordBranch, recordEnding } from './ngplus';
 import { resolveMix } from './resolve';
 import { pickSearchWithHints } from './search';
 import { AREAS, BRANCHES, STAGE_KEEPSAKES } from './stages';
@@ -29,7 +30,9 @@ export function createInitialState(): SaveState {
     stage: 1,
     stepIndex: 0,
     buildDone: false,
-    ngPlus: false,
+    // C2 批次：`ngPlus` 从布尔语义位扩成对象容器（GDD §7.3）。
+    // 新档 = 一周目空档案。
+    ngPlus: createNgPlus(),
     crafts: 0,
     logsFound: [],
     branches: { ship: false, teashop: false, birthday: false, stay: false },
@@ -213,6 +216,10 @@ export function craft(
   // 前任日志载体记账（C1 批次）。
   // 载体是普通合成产物，可以被消耗、可以重复合出 —— 所以记的是**日志 id 集合**，
   // 合出一次就记上，物品后来被用掉了也不收回（读过就记得）。
+  //
+  // ⚠️ 这里**不写** `ngPlus.readLogs`：那是「这辈子读过哪些篇目」，
+  // 由玩家在日志面板里点开正文时才记（web 的 `readLog` 动作 → core `recordReadLog`）。
+  // 「拿到载体」与「读过」是两件事，别混。
   const logId = CARRIER_TO_LOG[output.id];
   if (logId && !next.logsFound.includes(logId)) {
     next = { ...next, logsFound: [...next.logsFound, logId] };
@@ -308,6 +315,8 @@ export function craft(
         next = {
           ...next,
           branches: { ...next.branches, [status.id]: true },
+          // 跨周目支线历史（C2 批次 · G3「你认得路」）：这条支线这辈子走过。
+          ngPlus: recordBranch(next.ngPlus, status.id),
           keepsakes: next.keepsakes.includes(branch.keepsake)
             ? next.keepsakes
             : [...next.keepsakes, branch.keepsake],
@@ -330,6 +339,8 @@ export function craft(
           next = {
             ...next,
             ending: branch.ending,
+            // 跨周目结局记账（C2 批次）：图鉴 5 格的解锁来源。
+            ngPlus: recordEnding(next.ngPlus, branch.ending),
             log: appendLog(next.log, {
               day: next.day,
               kind: '结局',
@@ -365,6 +376,8 @@ export function attemptLaunch(
     next = {
       ...next,
       ending: 'leave',
+      // 跨周目结局记账（C2 批次）
+      ngPlus: recordEnding(next.ngPlus, 'leave'),
       keepsakes: next.keepsakes.includes('ks_ship')
         ? next.keepsakes
         : [...next.keepsakes, 'ks_ship'],
@@ -401,6 +414,8 @@ export function finishGame(
   return {
     ...state,
     ending,
+    // 跨周目结局记账（C2 批次）：图鉴 5 格的解锁来源。
+    ngPlus: recordEnding(state.ngPlus, ending),
     log: appendLog(state.log, {
       day: state.day,
       kind: '结局',

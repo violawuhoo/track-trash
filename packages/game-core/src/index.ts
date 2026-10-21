@@ -10,6 +10,7 @@ export type {
   MixHint,
   MixOutcome,
   MixResult,
+  NgPlusState,
   Progress,
   Recipe,
   SaveState,
@@ -68,9 +69,37 @@ export {
   type LaunchMode,
 } from './launch';
 export {
+  pairingExample,
+  stage1ExampleItemsInCrash,
+  type PairingExample,
+} from './ngplus_gain';
+export {
+  BRANCH_SCORE_WEIGHT,
+  CYCLE_SCORE_WEIGHT,
+  cycleOfNgPlus,
+  progressScoreOf,
+  type ProgressBranches,
+  type ProgressScoreInput,
+} from './progress';
+export {
+  BRANCH_IDS,
+  ENDING_IDS,
+  continueAfterEnding,
+  createNgPlus,
+  isBranchId,
+  isEndingId,
+  ngPlusUnlocked,
+  normalizeNgPlus,
+  recordBranch,
+  recordEnding,
+  recordReadLog,
+  startNextCycle,
+} from './ngplus';
+export {
   CARRIER_TO_LOG,
   LOG_BY_ID,
   LOGS,
+  alreadyRead,
   carrierFound,
   logUnlocked,
   pendingLogs,

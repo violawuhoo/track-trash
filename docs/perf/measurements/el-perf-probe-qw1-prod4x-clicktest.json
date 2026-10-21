@@ -1,0 +1,321 @@
+{
+  "label": "qw1-prod4x",
+  "url": "http://127.0.0.1:4184/track-trash/",
+  "ua": "Mozilla/5.0 (Linux; Android 13; SM-A546B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Mobile Safari/537.36",
+  "viewport": "390x844 @ DPR2, isMobile+hasTouch",
+  "cpuThrottle": 4,
+  "measuredAt": "2026-10-21T04:55:37.909Z",
+  "load": {
+    "ttfbMs": 3,
+    "dclMs": 544,
+    "loadMs": 545,
+    "fcpMs": 1056,
+    "lcpMs": 1056,
+    "cls": 0,
+    "tbtMs": 229,
+    "longTaskCount": 3,
+    "requests": 10,
+    "transferBytes": 223820,
+    "decodedBytes": 706484,
+    "byType": {
+      "script": {
+        "n": 8,
+        "bytes": 218711
+      },
+      "link": {
+        "n": 1,
+        "bytes": 4797
+      },
+      "fetch": {
+        "n": 1,
+        "bytes": 312
+      }
+    },
+    "biggest": [
+      {
+        "name": "http://127.0.0.1:4184/track-trash/assets/index-DN6k63hJ.js",
+        "type": "script",
+        "bytes": 158980,
+        "ms": 33
+      },
+      {
+        "name": "http://127.0.0.1:4184/track-trash/assets/WebGLRenderer-BwF5pq_F.js",
+        "type": "script",
+        "bytes": 20528,
+        "ms": 6
+      },
+      {
+        "name": "http://127.0.0.1:4184/track-trash/assets/RenderTargetSystem-DcD8NTOg.js",
+        "type": "script",
+        "bytes": 15240,
+        "ms": 5
+      },
+      {
+        "name": "http://127.0.0.1:4184/track-trash/assets/browserAll-CWsx_Hcu.js",
+        "type": "script",
+        "bytes": 11792,
+        "ms": 4
+      },
+      {
+        "name": "http://127.0.0.1:4184/track-trash/assets/webworkerAll-Bv0D_1TK.js",
+        "type": "script",
+        "bytes": 5246,
+        "ms": 3
+      },
+      {
+        "name": "http://127.0.0.1:4184/track-trash/assets/index-C70JqN8l.css",
+        "type": "link",
+        "bytes": 4797,
+        "ms": 29
+      },
+      {
+        "name": "http://127.0.0.1:4184/track-trash/assets/getTexelRangeRects-4eLdgBfS.js",
+        "type": "script",
+        "bytes": 3308,
+        "ms": 3
+      },
+      {
+        "name": "http://127.0.0.1:4184/track-trash/assets/canvasUtils-DfYMSl4Z.js",
+        "type": "script",
+        "bytes": 2120,
+        "ms": 3
+      },
+      {
+        "name": "http://127.0.0.1:4184/track-trash/assets/CanvasPool-BqYdYY2P.js",
+        "type": "script",
+        "bytes": 1497,
+        "ms": 3
+      },
+      {
+        "name": "http://127.0.0.1:4184/api/saves/me",
+        "type": "fetch",
+        "bytes": 312,
+        "ms": 3
+      }
+    ],
+    "navWallMs": 1622
+  },
+  "gameEntry": {
+    "clickToCanvasMs": 1028,
+    "clickToWorldLoopMs": 1028,
+    "worldItems": -1,
+    "glRenderer": "ANGLE (Intel, Intel(R) Arc(TM) 130T GPU (15GB) (0x00007D51) Direct3D11 vs_5_0 ps_5_0, D3D11)"
+  },
+  "scenarios": {
+    "idle": {
+      "rafCallbacks": 1200,
+      "frames": 600,
+      "spanS": 10.02,
+      "meanFps": 59.8,
+      "p50Ms": 16.7,
+      "p90Ms": 16.8,
+      "p95Ms": 16.8,
+      "p99Ms": 16.8,
+      "maxMs": 33.4,
+      "over16": 203,
+      "over33": 2,
+      "over50": 0,
+      "over100": 0,
+      "droppedPct": 0.3,
+      "worstGaps": [
+        {
+          "atMs": 3289,
+          "gapMs": 33.4
+        },
+        {
+          "atMs": 3439,
+          "gapMs": 33.3
+        },
+        {
+          "atMs": 8723,
+          "gapMs": 17.6
+        },
+        {
+          "atMs": 8522,
+          "gapMs": 16.9
+        },
+        {
+          "atMs": 11906,
+          "gapMs": 16.9
+        }
+      ],
+      "longTasks": [],
+      "taskS": 3.864,
+      "scriptS": 1.342,
+      "layoutS": 0.037,
+      "styleS": 0.441,
+      "mainThreadBusyPct": 38.6,
+      "heapEndMB": 8
+    },
+    "move": {
+      "rafCallbacks": 7262,
+      "frames": 3631,
+      "spanS": 60.67,
+      "meanFps": 59.8,
+      "p50Ms": 16.7,
+      "p90Ms": 16.8,
+      "p95Ms": 16.8,
+      "p99Ms": 16.9,
+      "maxMs": 100.1,
+      "over16": 1296,
+      "over33": 4,
+      "over50": 1,
+      "over100": 1,
+      "droppedPct": 0.1,
+      "worstGaps": [
+        {
+          "atMs": 13789,
+          "gapMs": 100.1
+        },
+        {
+          "atMs": 14739,
+          "gapMs": 50
+        },
+        {
+          "atMs": 30622,
+          "gapMs": 33.3
+        },
+        {
+          "atMs": 33539,
+          "gapMs": 33.3
+        },
+        {
+          "atMs": 39822,
+          "gapMs": 33.2
+        }
+      ],
+      "longTasks": [
+        {
+          "atMs": 13689,
+          "ms": 101
+        },
+        {
+          "atMs": 14689,
+          "ms": 64
+        }
+      ],
+      "taskS": 21.163,
+      "scriptS": 8.739,
+      "layoutS": 0.191,
+      "styleS": 1.535,
+      "mainThreadBusyPct": 34.9,
+      "heapEndMB": 8
+    },
+    "ui": {
+      "rafCallbacks": 868,
+      "frames": 434,
+      "spanS": 7.37,
+      "meanFps": 58.8,
+      "p50Ms": 16.7,
+      "p90Ms": 16.7,
+      "p95Ms": 16.8,
+      "p99Ms": 33.2,
+      "maxMs": 66.6,
+      "over16": 63,
+      "over33": 4,
+      "over50": 3,
+      "over100": 0,
+      "droppedPct": 0.9,
+      "worstGaps": [
+        {
+          "atMs": 74121,
+          "gapMs": 66.6
+        },
+        {
+          "atMs": 74188,
+          "gapMs": 50.2
+        },
+        {
+          "atMs": 74038,
+          "gapMs": 50.1
+        },
+        {
+          "atMs": 75605,
+          "gapMs": 33.4
+        },
+        {
+          "atMs": 73938,
+          "gapMs": 33.2
+        }
+      ],
+      "longTasks": [
+        {
+          "atMs": 74055,
+          "ms": 67
+        }
+      ],
+      "taskS": 2.929,
+      "scriptS": 0.759,
+      "layoutS": 0.086,
+      "styleS": 0.305,
+      "mainThreadBusyPct": 39.7,
+      "heapEndMB": 8
+    }
+  },
+  "endState": {
+    "player": null,
+    "screen": null
+  },
+  "pageErrors": [],
+  "framesTotal": 9338,
+  "framesBoot": {
+    "rafCallbacks": 8,
+    "frames": 4,
+    "spanS": 0.4,
+    "meanFps": 7.5,
+    "p50Ms": 116.7,
+    "p90Ms": 233.2,
+    "p95Ms": 233.2,
+    "p99Ms": 233.2,
+    "maxMs": 233.2,
+    "over16": 3,
+    "over33": 3,
+    "over50": 2,
+    "over100": 2,
+    "droppedPct": 100,
+    "worstGaps": [
+      {
+        "atMs": 2972,
+        "gapMs": 233.2
+      },
+      {
+        "atMs": 3089,
+        "gapMs": 116.7
+      },
+      {
+        "atMs": 3139,
+        "gapMs": 49.9
+      }
+    ],
+    "longTasks": [
+      {
+        "atMs": 462,
+        "ms": 83
+      },
+      {
+        "atMs": 1143,
+        "ms": 53
+      },
+      {
+        "atMs": 1261,
+        "ms": 243
+      },
+      {
+        "atMs": 1713,
+        "ms": 209
+      },
+      {
+        "atMs": 1979,
+        "ms": 730
+      },
+      {
+        "atMs": 2745,
+        "ms": 232
+      },
+      {
+        "atMs": 3028,
+        "ms": 73
+      }
+    ]
+  }
+}

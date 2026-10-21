@@ -370,13 +370,23 @@ function shapeFor(key: string | undefined): ShapeName {
 /**
  * 唯一的形状 → 标记函数。两个出口都必须走这里，
  * 这样「背包里的图标」和「地上的贴纸」在几何上逐字节相同。
+ *
+ * 结果按 (shape, fill, strokeBox) 缓存：背包网格每次 collect 都会重渲染，
+ * 不缓存的话每张卡片都要重新拼一遍 SVG 字符串（T10-QW1）。
+ * 缓存只影响性能，不影响输出——同一个 key 的返回值与不缓存时逐字节相同。
  */
+const markupCache = new Map<string, string>();
+
 function shapeMarkup(shape: ShapeName, fill: string, strokeBox: number): string {
+  const key = `${shape}\u0000${fill}\u0000${strokeBox}`;
+  const hit = markupCache.get(key);
+  if (hit !== undefined) return hit;
   const inner = (SHAPES[shape] ?? SHAPES.blob)(fill);
-  return (
+  const markup =
     `<g fill="none" stroke="${PALETTE.ink}" stroke-width="${strokeBox}"` +
-    ` stroke-linecap="round" stroke-linejoin="round">${inner}</g>`
-  );
+    ` stroke-linecap="round" stroke-linejoin="round">${inner}</g>`;
+  markupCache.set(key, markup);
+  return markup;
 }
 
 export interface ItemIconProps {

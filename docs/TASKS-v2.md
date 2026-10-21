@@ -14,7 +14,7 @@
 **本地路径**：`C:\Users\E14\WorkBuddy\好垃`（就是仓库根，直接在此改，不要另建目录）
 
 **技术栈（已定，不要换）**
-- pnpm 9 workspace monorepo：`apps/web`、`apps/api`（未开工）、`packages/game-core`
+- pnpm 9 workspace monorepo：`apps/web`、`apps/api`（T8 已交付）、`packages/game-core`
 - 前端：React 18 + TypeScript + Vite 5 + Zustand 4，样式用**原生 CSS**（`tokens.css` + 普通 class），**禁止引入 Tailwind / styled-components / UI 组件库**
 - 规则内核：`packages/game-core` 是**纯函数**，禁止出现 DOM、`window`、`localStorage`、`fetch`
 - 目标渲染层：PixiJS 8（仅 v2 世界层使用），不得引入 Three.js
@@ -23,7 +23,7 @@
 ```bash
 pnpm install
 pnpm --filter @haola/web dev        # http://127.0.0.1:5173
-pnpm --filter @haola/game-core test # 39 个用例，必须全绿
+pnpm --filter @haola/game-core test # 60 个用例，必须全绿
 pnpm --filter @haola/web typecheck
 ```
 
@@ -42,14 +42,16 @@ pnpm --filter @haola/web typecheck
 4. 阶段 3 支线按**具体物品 id** 判定，不用标签匹配
 5. 前端断网必须能完整通关
 
-**当前状态**（2026-10-19 16:45 更新）
+**当前状态**（2026-10-21 更新）
 
 | 部分 | 状态 |
 |---|---|
-| `packages/game-core` | ✅ 60 件物品 / 24 条精确配方 / 11 条意外配对 / 3 阶段 6 步链 / 3 支线 / 起飞判定；**T5 `world.ts` 空间分布与硬保底已实现并提交**（`6eb2cfe`、`017e2f9`），5 测试文件 / 60 用例（含 world 21 条与 10 万次模拟） |
-| `apps/web` | ✅ v1 区域搜索版可玩（开始页 / 主界面 / 结局页 / localStorage 存档）；**T1 设计系统已交付**（`tokens.css` 116 令牌 + `docs/design/DESIGN-SYSTEM.md` + `preview.html`） |
-| v2 世界层 | 🟢 T0 `84dd5e7` + T5 `6eb2cfe`/`017e2f9` + T2 美术（批 0 `07c5c4c`、批 1 地形 `1ac2c7c`、批 2 小人 `2a2f2b7`）+ T3 世界层 `68cac73` + T4 界面层 `2a2f2b7` 全部已提交；**T6 内容 / T7 演出未开工** |
-| `apps/api` | ❌ 未开工 |
+| `packages/game-core` | ✅ 80 件物品 / 36 条精确配方 / 11 条意外配对 / 3 阶段 6 步链 / 3 支线 / 起飞判定；**T5 `world.ts` 空间分布与硬保底已实现并提交**（`6eb2cfe`、`017e2f9`），5 测试文件 / 60 用例（含 world 21 条与 10 万次模拟），CI 全绿 |
+| `apps/web` | ✅ v2 开放世界版可玩（PixiJS 世界层 + HUD / 背包抽屉 / 合成槽 / 三档响应式 + T7 新手指引 + T8 云存档静默同步）；localStorage 存档 `haola.save.v2`（SAVE_SCHEMA=2，不做旧档迁移） |
+| v2 世界层 | ✅ T0 `84dd5e7` + T5 `6eb2cfe`/`017e2f9` + T2 美术（批 0 `07c5c4c`、批 1 地形 `1ac2c7c`、批 2 小人 `2a2f2b7`）+ T3 世界层 `68cac73` + T4 界面层 `2a2f2b7` + T6/T7 `253d720` 全部已提交并推送 |
+| `apps/api` | ✅ T8 已交付（`5882d30`）：Fastify + Drizzle，5 接口（config/save/save:deviceId/telemetry/health），9 用例全绿；前端 localStorage 优先、云端后台合并、失败静默降级 |
+| T9 音效 | ⬜ 未开工（可选） |
+| T10 性能与发布 | 🟢 进行中：质量门全绿（CI 5882d30 success；check-content 80 物品/36 配方全过；check-assets 全过；api 9/9）；**Pages 上线阻塞中**——仓库未启用 Pages，Deploy Web 8 连败于 configure-pages（GITHUB_TOKEN 403 无法自建站点），需用户手动 Settings → Pages → Source: GitHub Actions，见 `docs/release/RELEASE-CHECKLIST.md` |
 
 > 注：测试基线受沙箱 `EPERM` 影响会静默丢文件（退出码仍为 0），验收必须核对「5 文件 / 60 用例」，不能只看 exit code。
 
@@ -72,8 +74,10 @@ pnpm --filter @haola/web typecheck
 | T2 美术 | `07c5c4c` `1ac2c7c` `2a2f2b7` | 批 0 色盘/校验、批 1 地形 17 张、批 2 小人 4向×6帧 |
 | T3 世界层 | `68cac73` | 五层容器 / 相机 / 输入 / 地形摆放 / 雾障 |
 | T4 界面层 | `2a2f2b7` | store v2 + HUD/抽屉/合成槽 + 三档响应式 |
+| T6 内容扩容 + T7 新手指引 | `253d720` | 60→80 物品 / 24→36 配方；引导状态机 newcomer→firstMove→firstPickup→firstCraft→free，读档不重播 |
+| T8 后端云存档 | `5882d30` | Fastify + Drizzle 5 接口 + web 静默同步；api 9 用例全绿；main 与 origin/main 一致 |
 
-**下一个任务：T6（内容扩容）→ 然后 T7（引导）。**
+**主线 T0–T8 已全部完成并推送（HEAD `5882d30`）。剩下：T9 音效（可选，未开工）、T10 性能与发布（进行中，阻塞在 Pages 手动启用）。**
 
 ### 会咬人的坑（全部实测过）
 
@@ -105,19 +109,19 @@ node scripts/t4-shots.mjs http://127.0.0.1:5176/
 
 分四组。**规模**是给人判断工作量用的，不是承诺工时。
 
-| 编号 | 任务 | 组 | 主要产出 | 规模 | 前置 |
-|---|---|---|---|---|---|
-| **T0** | 架构契约冻结 | 工程 | `docs/CONTRACT-v2.md` + 空骨架文件 | S | — |
-| **T1** | 设计系统与视觉规范 | A 视觉 | `tokens.css` 扩展 + `docs/design/DESIGN-SYSTEM.md` + 静态样张 | M | T0 |
-| **T2** | 世界美术资产 | A 视觉 | 星球/地面/山石/小人/雾障 SVG + `ItemIcon` 纹理导出 | L | T1 |
-| **T3** | 世界渲染层（PixiJS） | B 世界 | `apps/web/src/world/*` | L | T0、T2（可先用占位） |
-| **T4** | 界面层实现 | A 视觉 | HUD / 背包抽屉 / 合成台 / 对话条 / 响应式 | L | T1、T3（要挂载点） |
-| **T5** | 玩法规则与空间化保底 | B 世界 | `game-core/src/world.ts` + 穷举测试 | M | T0 |
-| **T6** | 内容扩容 | C 内容 | 物品 / 配方 / 阶段 / 台词 / 结局 | M | T0 |
-| **T7** | 新手指引与叙事节奏 | C 内容 | 前 5 分钟引导状态机 + 提示文案 | S | T4、T6 |
-| **T8** | 后端云存档 | D 工程 | `apps/api` + 同步接口 | M | T0，**可与主线并行** |
-| **T9** | 音效（可选） | D 工程 | WebAudio 合成音效 | S | T4 |
-| **T10** | 性能与发布 | D 工程 | 帧率优化 + Pages 上线 | S | T3、T4 |
+| 编号 | 任务 | 组 | 主要产出 | 规模 | 前置 | 状态 |
+|---|---|---|---|---|---|---|
+| **T0** | 架构契约冻结 | 工程 | `docs/CONTRACT-v2.md` + 空骨架文件 | S | — | ✅ `84dd5e7` |
+| **T1** | 设计系统与视觉规范 | A 视觉 | `tokens.css` 扩展 + `docs/design/DESIGN-SYSTEM.md` + 静态样张 | M | T0 | ✅ |
+| **T2** | 世界美术资产 | A 视觉 | 星球/地面/山石/小人/雾障 SVG + `ItemIcon` 纹理导出 | L | T1 | ✅ `07c5c4c`/`1ac2c7c`/`2a2f2b7` |
+| **T3** | 世界渲染层（PixiJS） | B 世界 | `apps/web/src/world/*` | L | T0、T2（可先用占位） | ✅ `68cac73` |
+| **T4** | 界面层实现 | A 视觉 | HUD / 背包抽屉 / 合成台 / 对话条 / 响应式 | L | T1、T3（要挂载点） | ✅ `2a2f2b7` |
+| **T5** | 玩法规则与空间化保底 | B 世界 | `game-core/src/world.ts` + 穷举测试 | M | T0 | ✅ `6eb2cfe`/`017e2f9` |
+| **T6** | 内容扩容 | C 内容 | 物品 / 配方 / 阶段 / 台词 / 结局 | M | T0 | ✅ `253d720` |
+| **T7** | 新手指引与叙事节奏 | C 内容 | 前 5 分钟引导状态机 + 提示文案 | S | T4、T6 | ✅ `253d720` |
+| **T8** | 后端云存档 | D 工程 | `apps/api` + 同步接口 | M | T0，**可与主线并行** | ✅ `5882d30` |
+| **T9** | 音效（可选） | D 工程 | WebAudio 合成音效 | S | T4 | ⬜ 未开工 |
+| **T10** | 性能与发布 | D 工程 | 帧率优化 + Pages 上线 | S | T3、T4 | 🟢 进行中（质量门全绿；Pages 阻塞于手动启用，见 `docs/release/RELEASE-CHECKLIST.md`） |
 
 规模：S ≈ 半天以内、M ≈ 1–2 天、L ≈ 3 天以上（单人视角）。
 

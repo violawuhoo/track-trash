@@ -37,9 +37,9 @@ export type ItemKind =
   | 'accident'
   | 'keepsake';
 
-export type EndingId = 'leave' | 'teashop' | 'birthday' | 'free';
+export type EndingId = 'leave' | 'teashop' | 'birthday' | 'stay' | 'free';
 
-export type BranchId = 'ship' | 'teashop' | 'birthday';
+export type BranchId = 'ship' | 'teashop' | 'birthday' | 'stay';
 
 /** 贴纸配色，只允许有限色盘 */
 export type StickerColor = 'orange' | 'mint' | 'purple' | 'pink' | 'yellow';
@@ -156,6 +156,17 @@ export interface SaveState {
    * 读档时归一化（老存档缺字段 → false）。
    */
   buildDone: boolean;
+  /**
+   * 二周目是否已解锁（A2 批次）。
+   *
+   * GDD §7.3 把 `ngPlus` 定义为对象容器（cycle / endings / readLogs / branchesHistory），
+   * 但本批次只落**布尔语义位**：二周目的完整档案容器属于 C2 批次。
+   * 这里只保证「字段入类型 + 读档归一化」这条先例成立，且不 bump schemaVersion。
+   *
+   * ⚠️ C2 批次把它扩成 `NgPlusState` 时，老存档里这个 `true` 需要被当作
+   * 「cycle ≥ 2 的空档案」来归一化 —— 迁移点记在 C2 的任务书里。
+   */
+  ngPlus: boolean;
   branches: Record<BranchId, boolean>;
   keepsakes: string[];
   accidents: number;

@@ -91,7 +91,7 @@ export const STAGE_KEEPSAKES: Readonly<Record<1 | 2 | 3, string>> = Object.freez
 });
 
 /**
- * 阶段 3 的三条支线。完成任意一条即可进入收尾，
+ * 阶段 3 的四条支线。完成任意一条即可进入收尾，
  * 但只有「造飞船」分支能起飞。
  */
 export const BRANCHES: BranchDef[] = [
@@ -123,6 +123,20 @@ export const BRANCHES: BranchDef[] = [
     keepsake: 'ks_birthday',
     ending: 'birthday',
   },
+  // 第四支线「留下来」（GDD §3.1）。
+  // 三个槽位按**具体物品 id** 判定，不是标签 —— 「被这个地方承认」必须有凭据。
+  {
+    id: 'stay',
+    name: '留下来',
+    slots: ['落脚', '营生', '熟人'],
+    requires: [
+      ['staykey', 'landdeed'],
+      ['toolstand', 'sewkit'],
+      ['neighbor', 'warmchair'],
+    ],
+    keepsake: 'ks_stay',
+    ending: 'stay',
+  },
 ];
 
 /** 飞船三件套，用于起飞判定 */
@@ -137,5 +151,6 @@ export const ENDINGS: Readonly<
   leave: { id: 'leave', title: '离开星球', subtitle: '你走了。石头还在唱。' },
   teashop: { id: 'teashop', title: '开奶茶店', subtitle: '宇宙尽头，一杯差不多。' },
   birthday: { id: 'birthday', title: '给石头过生日', subtitle: '它唱了一首没人听懂的歌。' },
+  stay: { id: 'stay', title: '留下来', subtitle: '你没有走。石头多了一个会回来的邻居。' },
   free: { id: 'free', title: '自由模式', subtitle: '没有目标了。这可能是最好的结局。' },
 });

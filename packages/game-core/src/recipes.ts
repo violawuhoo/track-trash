@@ -1,7 +1,7 @@
 import type { AccidentRule, Recipe, Tag } from './types';
 
 /**
- * 精确配方：39 条。
+ * 精确配方：54 条。
  *
  * 精确配方不是推进阶段的唯一途径，只是快捷路径。
  * 判定优先级：阶段目标 > 精确配方 > 风险 > 意外配对 > 兜底。
@@ -59,6 +59,25 @@ export const RECIPES: Recipe[] = [
   { a: 'tape', b: 'manual', out: 'notice' },
   { a: 'crowbar', b: 'fuel', out: 'generator' },
   { a: 'echo', b: 'broom', out: 'hourglass' },
+  // ── v3 增量配方（GDD §5）──
+  // 第 1 层：其余 6 件 mid（base + base）。
+  { a: 'mirror', b: 'tape', out: 'valvework' },
+  { a: 'battery', b: 'lottery', out: 'switchpanel' },
+  { a: 'screw', b: 'tape', out: 'driverset' },
+  { a: 'lamp', b: 'ducttape', out: 'portablelight' },
+  { a: 'crowbar', b: 'manual', out: 'beacontower' },
+  { a: 'firework', b: 'tape', out: 'warnlamp' },
+  // 第 2 层：第四支线「留下来」的六个槽位候选（mid/委托 + base）。
+  { a: 'valvework', b: 'tire', out: 'toolstand' },
+  { a: 'driverset', b: 'glitter', out: 'sewkit' },
+  { a: 'switchpanel', b: 'fossil', out: 'staykey' },
+  { a: 'debt', b: 'photo', out: 'landdeed' },
+  { a: 'awkward', b: 'mirror', out: 'neighbor' },
+  { a: 'bedframe', b: 'tape', out: 'warmchair' },
+  // 第 3 层：前任日志载体（mid + base）。
+  { a: 'homework', b: 'switchpanel', out: 'log_chip1' },
+  { a: 'warnlamp', b: 'crystal', out: 'log_b1' },
+  { a: 'generator', b: 'note', out: 'log_reel1' },
 ];
 
 /** 无序 key：两个 id 排序后拼接，保证 a+b 与 b+a 命中同一条 */

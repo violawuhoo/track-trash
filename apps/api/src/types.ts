@@ -16,6 +16,8 @@ export const SaveStateSchema = z
       ship: z.boolean(),
       teashop: z.boolean(),
       birthday: z.boolean(),
+      // 第四支线「留下来」（A2）。可选：老存档没有这个键，别让老档传不上去。
+      stay: z.boolean().optional(),
     }),
     keepsakes: z.array(z.string()),
     accidents: z.number(),

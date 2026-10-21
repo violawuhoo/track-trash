@@ -89,6 +89,7 @@ function fromCore(next: SaveState, world: PlacedItem[], tutorial: TutorialState)
     branches: next.branches,
     keepsakes: next.keepsakes,
     buildDone: next.buildDone,
+    ngPlus: next.ngPlus,
     accidents: next.accidents,
     log: next.log,
     ending: next.ending,
@@ -133,6 +134,20 @@ function readTutorial(raw: unknown): TutorialState {
       : 0;
   if (step !== 'free' && picks >= TUTORIAL_PICK_CAP) return { step: 'free', picks };
   return { step, picks };
+}
+
+/** 读档归一化：branches 里缺失的支线键一律 false */
+function readBranches(raw: unknown): Record<string, boolean> {
+  const out: Record<string, boolean> = {
+    ship: false,
+    teashop: false,
+    birthday: false,
+    stay: false,
+  };
+  if (!raw || typeof raw !== 'object') return out;
+  const b = raw as Record<string, unknown>;
+  for (const key of Object.keys(out)) out[key] = b[key] === true;
+  return out;
 }
 
 /** 状态机推进。已在 free 的不动；craft 一刀切到 free */
@@ -189,6 +204,13 @@ function readSavedGame(): SaveStateV2 | null {
       // 归一化：老存档（A1a 之前写入的）没有 buildDone 字段 → 一律 false。
       // 不 bump schemaVersion，走 T7 `tutorial` 的同款先例（入存档但不迁移）。
       buildDone: parsed.buildDone === true,
+      // 归一化：老存档没有 ngPlus 字段 → 一律 false。
+      // GDD §7.3 把 ngPlus 定义为对象容器（cycle/endings/readLogs/branchesHistory），
+      // 本批只落布尔语义位；扩成对象容器是 C2 批次的事（见 game-core types.ts 注释）。
+      ngPlus: parsed.ngPlus === true,
+      // 归一化：老存档的 branches 缺 stay 键 → 一律 false。
+      // 不做的话 `branches.stay` 读到 undefined，UI 与 availableEndings 的形状会不一致。
+      branches: readBranches(parsed.branches),
     };
   } catch {
     return null;
@@ -753,6 +775,8 @@ function branchSummary(id: string): string {
       return '招牌还没干，但已经有人排队了。';
     case 'birthday':
       return '生日办完了，它很高兴。';
+    case 'stay':
+      return '落脚的地方有了，生计有了，熟人也有了。';
     default:
       return '';
   }

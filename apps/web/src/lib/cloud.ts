@@ -34,11 +34,15 @@ interface CloudSave {
   updatedAt: string;
 }
 
-/** 进度评分（与 SPEC §8.1、服务端一致）。用于启动时本地/云端取高者。 */
+/** 进度评分（与 SPEC §8.1、服务端一致）。用于启动时本地/云端取高者。
+ *
+ *  A2：branches 类型加了 stay（第四支线）。**计分口径本批不改** ——
+ *  支线计分改造不在 A2 范围，GDD 建议 stay 权重与 teashop/birthday 相同，
+ *  留到支线计分那一批统一做，避免本批改动云端分数的历史可比性。 */
 export function progressScoreOf(s: {
   stage: number;
   stepIndex: number;
-  branches: { ship: boolean; teashop: boolean; birthday: boolean };
+  branches: { ship: boolean; teashop: boolean; birthday: boolean; stay: boolean };
   day: number;
 }): number {
   const branchesDone =

@@ -106,7 +106,22 @@ export type ShapeName =
   | 'placard'
   | 'coil'
   | 'sandglass'
-  | 'plaque';
+  | 'plaque'
+  // A2：其余 13 个 v3 新形状（几何直接取自
+  // docs/design/ASSETS-v3-SHAPES-snippet.ts，一个路径都没重画）
+  | 'valve'
+  | 'pylon'
+  | 'beacon'
+  | 'switch'
+  | 'driver'
+  | 'lamp'
+  | 'key'
+  | 'chair'
+  | 'thread'
+  | 'ribbon'
+  | 'reel'
+  | 'chip'
+  | 'sprout';
 
 const SHAPES: Record<ShapeName, ShapeFn> = {
   // ───────── v1 原样保留 ─────────
@@ -322,6 +337,104 @@ const SHAPES: Record<ShapeName, ShapeFn> = {
     <path d="M20 19h8M20 25h8M20 31h6"/>
     <path d="M14 40h20v6H14z" fill="${fill}"/>
   `,
+
+  // ── A2：其余 13 个 v3 新形状（几何直接取自
+  // docs/design/ASSETS-v3-SHAPES-snippet.ts，一个路径都没重画）──
+
+  /** 阀门 / 三通接头 —— valvework 阀门组（mid / pink） */
+  // 上圆下三叉的 Y 字
+  valve: (fill) => `
+    <path d="M24 10v12M24 22 13 33M24 22l11 11"/>
+    <circle cx="24" cy="10" r="5" fill="${fill}"/>
+  `,
+
+  /** 支架塔 / 信号塔 —— beacontower 灯塔桩（mid / mint） */
+  // 纯线条形状：不吃 fill，只靠描边成形（所以参数是 _fill）
+  pylon: (_fill) => `
+    <path d="M14 42 21 12h6l7 30M18 28h12M17 35h14"/>
+  `,
+
+  /** 信标 / 警示灯 —— warnlamp 警示灯（mid / pink） */
+  // 顶圆 + 锥身 + 底座
+  beacon: (fill) => `
+    <path d="M20 42 21 13h6l1 29z" fill="${fill}"/>
+    <circle cx="24" cy="9" r="4" fill="${fill}"/>
+    <path d="M12 42h24M16 30h16"/>
+  `,
+
+  /** 拨杆开关 —— switchpanel 开关盘（mid / purple） */
+  // L 形直角臂 + 顶端圆钮
+  switch: (fill) => `
+    <path d="M9 32h20a9 9 0 0 0 9-9V11"/>
+    <circle cx="38" cy="11" r="4" fill="${fill}"/>
+  `,
+
+  /** 螺丝刀 —— driverset 螺丝刀组（mid / orange） */
+  // 直杆 + 顶部方头
+  driver: (fill) => `
+    <path d="M24 42V20"/>
+    <path d="M18 20h12v-8H18z" fill="${fill}"/>
+  `,
+
+  /** 提灯 / 灯罩 —— portablelight 提灯（mid / yellow） */
+  // 三角罩 + 竖提手
+  lamp: (fill) => `
+    <path d="M16 28 24 12l8 16z" fill="${fill}"/>
+    <path d="M24 28v12M19 40h10"/>
+  `,
+
+  /** 钥匙 —— staykey 留下的钥匙（commission / mint） */
+  // 圆 + 长杆带齿；钥柄孔用闭合圆挖空
+  key: (fill) => `
+    <circle cx="16" cy="15" r="6.5" fill="${fill}"/>
+    <circle cx="16" cy="15" r="2.5" fill="${PALETTE.paper}"/>
+    <path d="M20 19 39 38M31 30l5-5M36 35l5-5"/>
+  `,
+
+  /** 折叠椅 —— warmchair 空椅子（commission / mint） */
+  // 靠背 + 座面 + 两条垂腿
+  chair: (fill) => `
+    <path d="M18 7h10v13H18z" fill="${fill}"/>
+    <path d="M12 20h22v6H12z" fill="${fill}"/>
+    <path d="M15 26v15M31 26v15"/>
+  `,
+
+  /** 缝线团 / 缠线 —— sewkit 缝补工具包（commission / yellow） */
+  // S 形走线用主色描边，末端线球填充
+  thread: (fill) => `
+    <path d="M10 12h16a6 6 0 0 1 0 12H18a6 6 0 0 0 0 12h18" stroke="${fill}"/>
+    <circle cx="38" cy="36" r="3" fill="${fill}"/>
+  `,
+
+  /** 丝带 / 缎带卷 —— landdeed 荒地契据（commission / pink） */
+  // 横向飘带带面 + 两条垂边
+  ribbon: (fill) => `
+    <path d="M8 14c8-6 24-6 32 0v8c-8-6-24-6-32 0z" fill="${fill}"/>
+    <path d="M8 14v20M40 14v20"/>
+  `,
+
+  /** 数据卷盘 / 磁带盘 —— log_reel1 数据卷盘（accident / purple） */
+  // 空心圆盘 + 十字辐（显式镂空 fill="none"，不吃主色填充，参数是 _fill）
+  reel: (_fill) => `
+    <path d="M12 24a12 12 0 1 0 24 0 12 12 0 0 0-24 0z" fill="none"/>
+    <path d="M24 14v20M14 24h20"/>
+  `,
+
+  /** 存储芯片 —— log_chip1 存储芯片（accident / yellow） */
+  // 横长方块 + 四条斜引脚
+  chip: (fill) => `
+    <rect x="17" y="20" width="14" height="8" fill="${fill}"/>
+    <path d="M21 24h6"/>
+    <path d="M17 20 12 13M31 20l5-7M17 28l-5 7M31 28l5 7"/>
+  `,
+
+  /** 嫩芽 —— ks_stay 留下纪念章（keepsake / orange） */
+  // Y 形双叶对生
+  sprout: (fill) => `
+    <path d="M23 40V22"/>
+    <path d="M23 26c-8 0-11-5-11-9 7 0 11 3 11 9z" fill="${fill}"/>
+    <path d="M23 22c8 0 11-5 11-9-7 0-11 3-11 9z" fill="${fill}"/>
+  `,
 };
 
 /**
@@ -397,6 +510,20 @@ const SHAPE_OF: Record<string, ShapeName> = {
   coil: 'coil',
   sandglass: 'sandglass',
   plaque: 'plaque',
+  // A2：其余 13 个 v3 新形状
+  valve: 'valve',
+  pylon: 'pylon',
+  beacon: 'beacon',
+  switch: 'switch',
+  driver: 'driver',
+  lamp: 'lamp',
+  key: 'key',
+  chair: 'chair',
+  thread: 'thread',
+  ribbon: 'ribbon',
+  reel: 'reel',
+  chip: 'chip',
+  sprout: 'sprout',
 };
 
 /**

@@ -28,7 +28,8 @@ export function createInitialState(): SaveState {
     stage: 1,
     stepIndex: 0,
     buildDone: false,
-    branches: { ship: false, teashop: false, birthday: false },
+    ngPlus: false,
+    branches: { ship: false, teashop: false, birthday: false, stay: false },
     keepsakes: [],
     accidents: 0,
     log: [{ day: 1, kind: '系统', text: '迫降完成。信号器是坏的。' }],
@@ -407,10 +408,11 @@ export function availableEndings(state: SaveState): EndingId[] {
     if (state.branches[b.id] && b.id !== 'ship') out.push(b.ending);
   }
   if (launchCheck(state.bag) !== 'none') out.push('leave');
-  // TODO(A2): 这里无条件 push('free')，stage 1 就能选「自由模式」结局。
-  // GDD 拍板第 2 条：「自由模式」应当 stage ≥ 2 起随时可选、且永久可选。
-  // 归 A2 批次修（A1a 不动）。
-  out.push('free');
+  // GDD §2.5 拍板口径：「自由模式」= 完成迫降期（stage ≥ 2）后随时可选、且永久可选。
+  // stage 1 不可选 —— 玩家还没学会合成、还没理解标签并集就能结束游戏，
+  // 等于把核心机制变成可跳过项。
+  // 完成 stay 之后 free 仍可选：那是「我建好了这里，但我还是想走」的语义分叉。
+  if (state.stage >= 2) out.push('free');
   return out;
 }
 

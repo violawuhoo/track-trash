@@ -1,7 +1,7 @@
 import type { Item } from './types';
 
 /**
- * 全物品表。84 件。
+ * 全物品表。100 件。
  *
  * kind 说明：
  *  - base       区域里能刷出来的基础物品
@@ -74,6 +74,13 @@ export const ITEMS: Item[] = [
   { id: 'notice', name: '手写告示', desc: '把缺页手册上唯一能看懂的一段抄在木板上。抄错了一个字，意思还是那样。', tags: ['中间', '知识', '部件'], kind: 'mid', color: 'orange', icon: 'placard' },
   { id: 'generator', name: '手摇发电机', desc: '摇十圈发三度电。剩下七圈是热身，第九圈开始算加班。', tags: ['中间', '能烧', '部件'], kind: 'mid', color: 'yellow', icon: 'coil' },
   { id: 'hourglass', name: '时漏', desc: '两个轮子互相追赶，追上一次就是一天。它不告诉你该不该走，只告诉你已经待了多久。', tags: ['中间', '部件', '抽象'], kind: 'mid', color: 'mint', icon: 'sandglass' },
+  // 其余 6 件 mid（GDD §4.1）：合成产物，是第四支线与日志载体的材料。
+  { id: 'valvework', name: '阀门组', desc: '三个接口，接谁都行。接错方向只会把事情做得更慢。', tags: ['中间', '金属', '部件'], kind: 'mid', color: 'pink', icon: 'valve' },
+  { id: 'switchpanel', name: '开关盘', desc: '一共四个档位。真正管用的只有两个，另外两个负责咔哒响。', tags: ['中间', '抽象', '部件'], kind: 'mid', color: 'purple', icon: 'switch' },
+  { id: 'driverset', name: '螺丝刀组', desc: '五把刀，规格全不一样。能拧动的螺丝只认其中两把。', tags: ['中间', '实体', '部件'], kind: 'mid', color: 'orange', icon: 'driver' },
+  { id: 'portablelight', name: '提灯', desc: '照亮范围两米。电量够用四小时，之后它开始讲睡前故事。', tags: ['中间', '导电', '部件'], kind: 'mid', color: 'yellow', icon: 'lamp' },
+  { id: 'beacontower', name: '灯塔桩', desc: '立在山包上的空架子。灯还没装，先把位置占了。', tags: ['中间', '能挡风', '部件'], kind: 'mid', color: 'mint', icon: 'pylon' },
+  { id: 'warnlamp', name: '警示灯', desc: '每晚闪三下，提醒路过的人这里有活物。没人路过，它也闪。', tags: ['中间', '风险', '部件'], kind: 'mid', color: 'pink', icon: 'beacon' },
 
   // ───────── 飞船部件 ship ─────────
   { id: 'joystick', name: '应急操纵杆', desc: '搋子加胶带。握感奇怪，但确实能推。', tags: ['部件', '实体', '金属'], kind: 'ship', color: 'orange', icon: 'joystick' },
@@ -97,6 +104,14 @@ export const ITEMS: Item[] = [
   { id: 'musicbox', name: '石头录音机', desc: '会唱歌的石头的歌关在了里面，想听随时放。石头失去了主场，换来了曝光。', tags: ['委托', '抽象'], kind: 'commission', color: 'yellow', icon: 'speaker' },
   { id: 'mannequin', name: '外星假人', desc: '模仿顾客的姿势模仿得很勉强，但自从有了它，店里的生意一直很稳定。', tags: ['委托', '实体'], kind: 'commission', color: 'mint', icon: 'person' },
   { id: 'bankrupt', name: '破产证明', desc: '由「欠债」与「赌博」双方联合认证。含金量为零，说服力刚好够用。', tags: ['委托', '知识'], kind: 'commission', color: 'orange', icon: 'cert' },
+  // 第四支线「留下来」的六个槽位候选（GDD §3.2）。
+  // 判定按**具体物品 id**，不是标签 —— 「被这个地方承认」必须有凭据。
+  { id: 'staykey', name: '留下的钥匙', desc: '有人把钥匙留在门槛上，没有留名字。锁是新的，锁着的是空房间。', tags: ['委托', '知识'], kind: 'commission', color: 'mint', icon: 'key' },
+  { id: 'landdeed', name: '荒地契据', desc: '证明你拥有一片连降落伞都嫌小的地。落款日期比你的年龄大。', tags: ['委托', '知识'], kind: 'commission', color: 'pink', icon: 'ribbon' },
+  { id: 'toolstand', name: '工具摊架', desc: '摆摊用的架子。摊主暂时没有，摊子先开业了。', tags: ['委托', '实体'], kind: 'commission', color: 'yellow', icon: 'shop' },
+  { id: 'sewkit', name: '缝补工具包', desc: '针线齐全，能补衣服和轮胎。补飞船的活儿它接不了。', tags: ['委托', '实体'], kind: 'commission', color: 'yellow', icon: 'thread' },
+  { id: 'neighbor', name: '邻居', desc: '一个会敲隔壁墙的邻居。敲的意思是「我还在」。', tags: ['委托', '抽象'], kind: 'commission', color: 'purple', icon: 'person' },
+  { id: 'warmchair', name: '空椅子', desc: '有人搬走时没带走它。椅面朝着你的方向，摆得很正。', tags: ['委托', '实体'], kind: 'commission', color: 'mint', icon: 'chair' },
 
   // ───────── 意外产物 accident ─────────
   { id: 'failedtaste', name: '失败的味道', desc: '尝起来像烧焦的塑料和一点点希望。', tags: ['意外', '风险'], kind: 'accident', color: 'orange', icon: 'smoke' },
@@ -112,6 +127,10 @@ export const ITEMS: Item[] = [
   { id: 'complexmood', name: '复杂的情绪', desc: '同时觉得还好和不太行。两种感觉互相抵消，剩下困。', tags: ['意外', '抽象'], kind: 'accident', color: 'yellow', icon: 'wave' },
   { id: 'gambler', name: '赌徒的乐观', desc: '你确信下一把能赢。这个信念本身不产生任何东西，但它很亮。', tags: ['意外', '风险', '抽象'], kind: 'accident', color: 'orange', icon: 'dice' },
   { id: 'dud', name: '哑炮', desc: '两个都很想炸的东西凑齐了，互相抵消，只剩礼貌。安静得像从没被组装过。', tags: ['意外', '实体'], kind: 'accident', color: 'orange', icon: 'blob2' },
+  // 前任日志载体（GDD §4.4）。本批落 3 件（其余 5 件随 C1 日志面板一起落）。
+  { id: 'log_chip1', name: '存储芯片', desc: '一小块存着很多东西的电路。断电前它一直在写，写到一半停了。', tags: ['意外', '知识', '风险'], kind: 'accident', color: 'yellow', icon: 'chip' },
+  { id: 'log_b1', name: '前任遗物', desc: '一个说不出是什么的物件。它一直在发热，别的都凉了。', tags: ['意外', '实体', '外星'], kind: 'accident', color: 'mint', icon: 'blob2' },
+  { id: 'log_reel1', name: '数据卷盘', desc: '前任留下的存储介质。转起来有声音，像有人在很远的地方翻身。', tags: ['意外', '外星', '知识'], kind: 'accident', color: 'purple', icon: 'reel' },
 
   // ───────── 纪念品 keepsake ─────────
   { id: 'ks_signal', name: '信号器纪念徽章', desc: '第一阶段纪念。它证明你确实把两样破东西接在了一起。', tags: ['纪念品'], kind: 'keepsake', color: 'mint', icon: 'badge' },
@@ -121,6 +140,7 @@ export const ITEMS: Item[] = [
   { id: 'ks_shop', name: '奶茶店招牌', desc: '字很大。外星人路过确实能看见。', tags: ['纪念品'], kind: 'keepsake', color: 'yellow', icon: 'sign' },
   { id: 'ks_birthday', name: '石头生日蛋糕', desc: '不能吃，但石头很喜欢。它唱了一首歌。', tags: ['纪念品'], kind: 'keepsake', color: 'pink', icon: 'candle' },
   { id: 'ks_build', name: '建设纪念牌', desc: '三件东西做成的牌。它证明你在这里造出了东西，不只是捡到了东西。', tags: ['纪念品'], kind: 'keepsake', color: 'pink', icon: 'plaque' },
+  { id: 'ks_stay', name: '留下纪念章', desc: '留在这颗星球的证明。章上没写日期，因为你还没打算走。', tags: ['纪念品'], kind: 'keepsake', color: 'orange', icon: 'sprout' },
 ];
 
 export const ITEM_MAP: Readonly<Record<string, Item>> = Object.freeze(

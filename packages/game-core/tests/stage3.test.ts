@@ -284,9 +284,10 @@ describe('阶段 3 三步目标链（正式内容）', () => {
       }
     }
 
-    // 覆盖面：三条支线共 17 个候选品全部有配方且被验证过
-    expect(branchTargets.size).toBe(17);
-    expect(checked.length).toBeGreaterThanOrEqual(17);
+    // 覆盖面：四条支线共 23 个候选品全部有配方且被验证过
+    // （前三条 17 个 + 第四支线 stay 的 6 个）
+    expect(branchTargets.size).toBe(23);
+    expect(checked.length).toBeGreaterThanOrEqual(23);
   });
 
   it('⑧b 阶段 3 的每一步 requires 都不能被任何支线产物的原料标签并集覆盖', () => {
@@ -306,6 +307,54 @@ describe('阶段 3 三步目标链（正式内容）', () => {
       for (const step of S3_STEPS) {
         if (step.requires.every((t: Tag) => tags.includes(t))) {
           culprits.push(`${r.a}+${r.b}→${r.out} 覆盖了 ${step.id}`);
+        }
+      }
+    }
+    expect(culprits).toEqual([]);
+  });
+
+  it('⑧c 支线候选品的「材料配方」也不被阶段目标截胡（闭包护栏）', () => {
+    // ⑧ / ⑧b 只验「直接产出候选品的那条配方」。
+    // 但候选品的材料本身可能也是合成产物（如 toolstand ← valvework ← mirror+tape），
+    // 若中间层被阶段目标截胡，支线照样做不出来 —— 所以要按依赖闭包逐层验。
+    const branchTargets = new Set<string>();
+    for (const branch of BRANCHES) {
+      for (const options of branch.requires) {
+        for (const id of options) branchTargets.add(id);
+      }
+    }
+
+    // 反查：能产出某 id 的配方（无序键）
+    const producersOf = new Map<string, { a: string; b: string }>();
+    for (const r of RECIPES) {
+      producersOf.set(`${r.a}|${r.b}`, { a: r.a, b: r.b });
+      producersOf.set(`${r.b}|${r.a}`, { a: r.a, b: r.b });
+    }
+
+    // 闭包：从候选品往下找材料，直到全是可捡的 base 物品
+    const closure = new Map<string, { a: string; b: string }>();
+    const queue = [...branchTargets];
+    const seen = new Set<string>(branchTargets);
+    while (queue.length) {
+      const id = queue.shift()!;
+      const hit = producersOf.get(id);
+      if (!hit) continue; // base 物品，没有上游配方
+      closure.set(id, hit);
+      for (const m of [hit.a, hit.b]) {
+        if (!seen.has(m)) {
+          seen.add(m);
+          queue.push(m);
+        }
+      }
+    }
+
+    // 闭包里每条配方，在三个步骤位上都必须走精确配方
+    const culprits: string[] = [];
+    for (const [out, r] of closure) {
+      for (let stepIndex = 0; stepIndex < S3_STEPS.length; stepIndex++) {
+        const { result } = resolveMix(r.a, r.b, at(3, stepIndex));
+        if (result.kind !== 'recipe' || result.output !== out) {
+          culprits.push(`${r.a}+${r.b}→${out} 在 s3-${stepIndex + 1} 被截胡（${result.kind}）`);
         }
       }
     }

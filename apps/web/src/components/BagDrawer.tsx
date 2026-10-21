@@ -157,7 +157,11 @@ export function BagDrawer() {
 
           <CraftSlots slots={slots} onClear={clearSlot} onCraft={craft} />
 
-          {stage === 3 && (
+          {/*
+            收尾区。GDD §2.5：「自由模式」= 完成迫降期（stage ≥ 2）后随时可选，
+            所以整块在 stage ≥ 2 就出现；起飞按钮仍只在 stage 3。
+          */}
+          {stage >= 2 && (
             <div className="drawer__final">
               {showLaunch && (
                 <button
@@ -186,12 +190,26 @@ export function BagDrawer() {
                   给石头过生日
                 </button>
               )}
+              {/*
+                第四支线「留下来」。与 free 同时可选、互不关闭（GDD §3.4）：
+                free 是「什么都不再追求」，stay 是「这个地方承认了你」。
+                按钮文案必须区分，故 free 用「自由模式」、stay 用「留下来」。
+              */}
+              {branches.stay && (
+                <button
+                  type="button"
+                  className="btn btn--block"
+                  onClick={() => chooseEnding('stay')}
+                >
+                  留下来
+                </button>
+              )}
               <button
                 type="button"
                 className="btn btn--block"
                 onClick={() => chooseEnding('free')}
               >
-                留下来
+                自由模式
               </button>
             </div>
           )}

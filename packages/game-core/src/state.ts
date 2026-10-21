@@ -2,8 +2,8 @@ import { ITEM_MAP, getItem } from './items';
 import { ENDING_LINES, lines, missingLine, type DialogueKey } from './dialogue';
 import { launchCheck, rollLaunch, allBranchStatus } from './launch';
 import { resolveMix } from './resolve';
-import { pickSearch } from './search';
-import { BRANCHES, STAGE_KEEPSAKES } from './stages';
+import { pickSearchWithHints } from './search';
+import { AREAS, BRANCHES, STAGE_KEEPSAKES } from './stages';
 import type {
   AreaId,
   BranchId,
@@ -27,6 +27,7 @@ export function createInitialState(): SaveState {
     discovered: {},
     stage: 1,
     stepIndex: 0,
+    buildDone: false,
     branches: { ship: false, teashop: false, birthday: false },
     keepsakes: [],
     accidents: 0,
@@ -84,21 +85,31 @@ export function searchArea(
   state: SaveState,
   rng: () => number = Math.random,
 ): SaveState {
-  const scene = pickSearch({
+  const outcome = pickSearchWithHints({
     progress: { stage: state.stage, stepIndex: state.stepIndex },
     bag: state.bag,
     areaId: state.areaId,
     rng,
   });
+  const scene = outcome.items;
+  let log = appendLog(state.log, {
+    day: state.day + 1,
+    kind: '系统',
+    text: `搜索了${state.areaId === 'crash' ? '坠毁点' : '附近'}，找到 ${scene.length} 样东西。`,
+  });
+  // 跨区域并集提示：当前区域凑不齐的标签，指路去别的已解锁区域拿。
+  for (const hint of outcome.hints) {
+    log = appendLog(log, {
+      day: state.day + 1,
+      kind: '系统',
+      text: `还缺「${hint.tag}」。${AREAS[hint.areaId].name}那边有，去那边找。`,
+    });
+  }
   return {
     ...state,
     day: state.day + 1,
     scene,
-    log: appendLog(state.log, {
-      day: state.day + 1,
-      kind: '系统',
-      text: `搜索了${state.areaId === 'crash' ? '坠毁点' : '附近'}，找到 ${scene.length} 样东西。`,
-    }),
+    log,
   };
 }
 
@@ -222,6 +233,30 @@ export function craft(
         }),
       };
       dialogueKey = clearedStage === 1 ? 'clear1' : 'clear2';
+    } else if (outcome.result.stageCleared && state.stage === 3) {
+      // ── 阶段 3 三步走满（GDD §2.4）──
+      // 不进 stage 4：stage 保持 3，stepIndex 停在 3（不再推进），
+      // 置 buildDone = true，发建设纪念品，写一条阶段日志。
+      // 幂等：keepsakes 已含则不重复发放。
+      const keepsake = STAGE_KEEPSAKES[3];
+      next = {
+        ...next,
+        stage: 3,
+        // 三步走满 → stepIndex 停在三步之后（= steps.length = 3），不再推进。
+        // 这样 resolve.ts 的内层守卫 `stepIndex < steps.length` 会放行，
+        // 建设期完成后回归纯配方判定。
+        stepIndex: outcome.result.nextStepIndex,
+        buildDone: true,
+        keepsakes: next.keepsakes.includes(keepsake)
+          ? next.keepsakes
+          : [...next.keepsakes, keepsake],
+        log: appendLog(next.log, {
+          day: next.day,
+          kind: '阶段',
+          text: '建设期完成。东西造出来了，接下来去哪你自己定。',
+        }),
+      };
+      dialogueKey = 'clear3';
     } else {
       dialogueKey = 'craft';
     }

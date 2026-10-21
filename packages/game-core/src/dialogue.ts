@@ -13,6 +13,7 @@ export type DialogueKey =
   | 'stage3'
   | 'clear1'
   | 'clear2'
+  | 'clear3'
   | 'accident'
   | 'wrong'
   | 'craft'
@@ -55,6 +56,11 @@ export const DIALOGUE: Readonly<Record<DialogueKey, string[]>> = Object.freeze({
   clear2: [
     '有墙、有顶、有床。恭喜，你从「遇难者」升级成「居民」了。',
     '居民这个身份没有补贴，但至少能睡个整觉。',
+  ],
+  // 占位：A1b 补正式台词（GDD §2.4 要 3 句）
+  clear3: [
+    '（占位）建设期完成。',
+    '（占位）接下来去哪，你自己定。',
   ],
   accident: [
     '这不是你要的。但它现在归你了。',

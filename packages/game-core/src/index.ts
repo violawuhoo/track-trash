@@ -52,7 +52,11 @@ export {
   bagHasTag,
   missingForBag,
   pickSearch,
+  pickSearchWithHints,
+  unlockedAreas,
+  type SearchHint,
   type SearchOptions,
+  type SearchOutcome,
 } from './search';
 export {
   allBranchStatus,

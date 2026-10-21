@@ -73,10 +73,15 @@ export const STAGES: StageDef[] = [
   },
 ];
 
-/** 阶段完成纪念品 */
-export const STAGE_KEEPSAKES: Readonly<Record<1 | 2, string>> = Object.freeze({
+/**
+ * 阶段完成纪念品
+ *
+ * 阶段 3 的 `ks_build` 在 A1a 只有发放点，物品本体与资产在 A1b 补齐。
+ */
+export const STAGE_KEEPSAKES: Readonly<Record<1 | 2 | 3, string>> = Object.freeze({
   1: 'ks_signal',
   2: 'ks_shelter',
+  3: 'ks_build',
 });
 
 /**

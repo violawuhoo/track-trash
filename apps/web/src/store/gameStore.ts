@@ -88,6 +88,7 @@ function fromCore(next: SaveState, world: PlacedItem[], tutorial: TutorialState)
     stepIndex: next.stepIndex,
     branches: next.branches,
     keepsakes: next.keepsakes,
+    buildDone: next.buildDone,
     accidents: next.accidents,
     log: next.log,
     ending: next.ending,

@@ -52,9 +52,12 @@ export function resolveMix(
   const tags = unionTags(a.tags, b.tags);
 
   // ── 1. 阶段目标 ──
-  const stage = progress.stage === 1 || progress.stage === 2
-    ? getStage(progress.stage)
-    : undefined;
+  // 阶段 1 / 2 / 3 都可能带标签目标链。阶段 3 走满三步后（stepIndex >= steps.length）
+  // 内层守卫会放行，回归纯配方判定 —— 建设期完成后不再拦截玩家的自由合成。
+  const stage =
+    progress.stage === 1 || progress.stage === 2 || progress.stage === 3
+      ? getStage(progress.stage)
+      : undefined;
 
   if (stage && progress.stepIndex < stage.steps.length) {
     const step = stage.steps[progress.stepIndex];

@@ -149,6 +149,13 @@ export interface SaveState {
   discovered: Record<string, true>;
   stage: 1 | 2 | 3 | 4;
   stepIndex: number;
+  /**
+   * 阶段 3 三步目标链是否已走满（GDD §2.4）。
+   *
+   * 不 bump schemaVersion：按 T7 `tutorial` 先例作为新增字段写入 v2 存档，
+   * 读档时归一化（老存档缺字段 → false）。
+   */
+  buildDone: boolean;
   branches: Record<BranchId, boolean>;
   keepsakes: string[];
   accidents: number;

@@ -3,6 +3,7 @@ import {
   BRANCHES,
   ITEMS,
   RECIPES,
+  STAGES,
   craft,
   createInitialState,
   getItem,
@@ -174,5 +175,102 @@ describe('配方可达性', () => {
         ).toBe(true);
       }
     }
+  });
+});
+
+describe('阶段 3 建设期（A1a 机制）', () => {
+  /**
+   * A1a 只打通机制、不填 `STAGES[2].steps` 的正式内容。
+   * 这里临时注入三步，验证「走满 → buildDone / ks_build / stage 不变 / 幂等」。
+   */
+  const S3_STEPS = [
+    { id: 's3-t1', requires: ['金属', '抽象'] as Tag[], output: 'bracket' },
+    { id: 's3-t2', requires: ['知识', '外星'] as Tag[], output: 'signal' },
+    { id: 's3-t3', requires: ['能烧', '粘'] as Tag[], output: 'joystick' },
+  ];
+
+  function withStage3Steps<T>(fn: () => T): T {
+    const stage3 = STAGES[2]!;
+    const backup = stage3.steps;
+    stage3.steps = [...backup, ...S3_STEPS];
+    try {
+      return fn();
+    } finally {
+      stage3.steps = backup;
+    }
+  }
+
+  /** 一个能走满阶段 3 三步的初始状态 */
+  function stage3State(): SaveState {
+    return {
+      ...createInitialState(),
+      stage: 3,
+      stepIndex: 0,
+      bag: {
+        screw: 2, // 金属
+        mood: 2, // 抽象
+        manual: 1, // 知识
+        homework: 1, // 外星
+        fuel: 1, // 能烧
+        tape: 1, // 粘
+      },
+    };
+  }
+
+  it('走满三步后：stage 仍是 3、stepIndex 停在 3、buildDone 为 true', () => {
+    withStage3Steps(() => {
+      let state = stage3State();
+
+      const r1 = craft(state, 'screw', 'mood');
+      expect(r1.ok).toBe(true);
+      if (!r1.ok) throw new Error('unreachable');
+      state = r1.state;
+      expect(state.stage).toBe(3);
+      expect(state.stepIndex).toBe(1);
+      expect(state.buildDone).toBe(false);
+
+      const r2 = craft(state, 'manual', 'homework');
+      if (!r2.ok) throw new Error('unreachable');
+      state = r2.state;
+      expect(state.stage).toBe(3);
+      expect(state.stepIndex).toBe(2);
+      expect(state.buildDone).toBe(false);
+
+      const r3 = craft(state, 'fuel', 'tape');
+      if (!r3.ok) throw new Error('unreachable');
+      state = r3.state;
+
+      // GDD §2.4：stage 保持 3，不进 stage 4
+      expect(state.stage).toBe(3);
+      expect(state.stepIndex).toBe(3);
+      expect(state.buildDone).toBe(true);
+      // 发放建设纪念品
+      expect(state.keepsakes).toContain('ks_build');
+      // 写了一条「阶段」日志
+      expect(state.log.some((l) => l.kind === '阶段')).toBe(true);
+    });
+  });
+
+  it('走满后 ks_build 不重复发放（幂等）', () => {
+    withStage3Steps(() => {
+      let state = stage3State();
+      for (const [a, b] of [
+        ['screw', 'mood'],
+        ['manual', 'homework'],
+        ['fuel', 'tape'],
+      ] as const) {
+        const r = craft(state, a, b);
+        if (!r.ok) throw new Error('unreachable');
+        state = r.state;
+      }
+      expect(state.keepsakes.filter((k) => k === 'ks_build')).toHaveLength(1);
+
+      // 走满后再合成：不再被阶段目标拦截，也不重复发纪念品
+      const again = craft(state, 'screw', 'mood');
+      if (!again.ok) throw new Error('unreachable');
+      expect(again.state.keepsakes.filter((k) => k === 'ks_build')).toHaveLength(1);
+      expect(again.state.stage).toBe(3);
+      expect(again.state.buildDone).toBe(true);
+    });
   });
 });

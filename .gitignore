@@ -21,3 +21,6 @@ shots/
 
 # 测试临时产物（run-tests.mjs 的 vitest TMP 根 + 临时探针脚本）
 .tmp/
+
+# IDE 会话产物（.genie 等），不入库
+.wbapp_*

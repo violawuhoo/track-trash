@@ -11,6 +11,7 @@ import { BAG_CAP, BRANCHES, bagSlots, launchCheck } from '@haola/game-core';
 import { useGame } from '../store/gameStore';
 import { ItemCard } from './ItemCard';
 import { CraftSlots } from './CraftSlots';
+import { CraftResults } from './CraftResults';
 
 /** 抽屉滑出动画时长（tokens.css --dur-2 = 180ms）。关抽屉后等这么久再跳过布局，
  *  避免动画播到一半内容被抽走。reduced-motion 下过渡是 1ms，多等无害。 */
@@ -139,10 +140,12 @@ export function BagDrawer() {
           className="drawer__body"
           style={bodySkipped ? { contentVisibility: 'hidden' } : undefined}
         >
+          <CraftResults />
+
           <div className="drawer__bag">
             {bagIds.length === 0 ? (
               <p className="drawer__empty">
-                空的。点地面走过去，靠近就自动捡起来了。
+                空的。走近东西会弹出信息卡，点它或「拾取」才进包。
               </p>
             ) : (
               <div className="bag-grid">

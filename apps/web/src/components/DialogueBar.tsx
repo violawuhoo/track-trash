@@ -111,7 +111,7 @@ export function DialogueBar({ lines, index, onAdvance }: Props) {
           AI
         </div>
         <div className="dialogue__text">
-          {current ? shown : '点地面走过去，靠近东西会自动捡起来。'}
+          {current ? shown : '点地面走过去。走近东西会弹出信息卡，点它才捡起来。'}
         </div>
         <div className="dialogue__next" aria-hidden="true">
           {current ? (index < lines.length - 1 ? '点击继续' : '点击收起') : '▴ 上滑'}

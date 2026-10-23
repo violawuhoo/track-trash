@@ -74,6 +74,9 @@ export const ZOOM_MAX = 1.6;
 /** `distribute` 的保底距离默认值：手机半屏 ≈ 400 世界单位（契约 §2.2） */
 const DEFAULT_MAX_DIST = 400;
 
+/** 产物架最多留几条「刚造出」（UI 批次 · 分区改版）。最新在前，超出丢弃最旧的 */
+export const RECENT_CRAFTS_MAX = 8;
+
 /**
  * v2 存档：删掉 `scene`（区域搜索结果）与 `areaId`（当前区域），
  * 改成 `world: PlacedItem[]`（地面物品）。区域由角色坐标推导。
@@ -414,6 +417,16 @@ interface GameStore {
   tutorFlags: { wrong: boolean; blocked: boolean };
   /** 世界线邀请已播过的线 id（瞬态，不入存档）。刷新后可重来一次，可接受 */
   invitesSeen: string[];
+  /**
+   * 当前「走近」的那件地面物品（UI 批次 · 分区改版：信息卡数据源，瞬态不入存档）。
+   * 由 `WorldCanvas` 的 `onFocusItem` 上报——走近新物品 / 走开 / 捡完都会更新。
+   */
+  focusItem: PlacedItem | null;
+  /**
+   * 最近造出的物品 id（UI 批次 · 分区改版：产物架，最新在前，瞬态不入存档）。
+   * 合成成功时压入，封顶 `RECENT_CRAFTS_MAX` 条。
+   */
+  recentCrafts: string[];
 
   // ── 世界（不持久化，契约 §3.2）──
   /** 角色实时位置。每帧更新，**没有订阅者**，别拿它渲染 */
@@ -434,6 +447,8 @@ interface GameStore {
   setMoveTarget: (x: number, y: number) => void;
   setPlayerPos: (x: number, y: number) => void;
   collect: (uid: string) => void;
+  /** 走近物品时由世界层回传最近的那件（信息卡用）。null = 走开/没有 */
+  setFocusItem: (item: PlacedItem | null) => void;
 
   craft: () => void;
   /** 扔掉一整叠（乐趣改版 ①）：满包时腾格用。免费动作，不耗天数 */
@@ -540,6 +555,8 @@ export const useGame = create<GameStore>((set, get) => {
     ngPlusConfirmOpen: false,
     tutorFlags: { wrong: false, blocked: false },
     invitesSeen: [],
+    focusItem: null,
+    recentCrafts: [],
 
     player: spawnPoint(),
     spawn: spawnPoint(),
@@ -603,6 +620,8 @@ export const useGame = create<GameStore>((set, get) => {
         ngPlusConfirmOpen: false,
         tutorFlags: { wrong: false, blocked: false },
         invitesSeen: [],
+        focusItem: null,
+        recentCrafts: [],
         player: spawn,
         spawn,
         moveTarget: null,
@@ -634,6 +653,8 @@ export const useGame = create<GameStore>((set, get) => {
         bagOpen: false,
         logOpen: false,
         tutorFlags: { wrong: false, blocked: false },
+        focusItem: null,
+        recentCrafts: [],
         player: spawn,
         spawn,
         moveTarget: null,
@@ -719,13 +740,19 @@ export const useGame = create<GameStore>((set, get) => {
         tutorial: advanceTutorial(save.tutorial, 'pickup'),
       };
 
-      commit(next);
+      commit(next, { focusItem: null });
       if (firstTime) get().showToast(item.name, item.desc);
       if (isFirstPickup) {
         // 追加而不是替换：别把开场的 start 台词顶掉
         const queued = get().dialog;
         get().say(queued.length > 0 ? [...queued, ...lines('tutPickup')] : lines('tutPickup'));
       }
+    },
+
+    /** 世界层走近物品时上报（信息卡）。只在 uid 真变时由世界层触发，这里直接落 */
+    setFocusItem: (item) => {
+      if (get().focusItem === item) return;
+      set({ focusItem: item });
     },
 
     // ── 玩法（T4 调用）──
@@ -857,7 +884,14 @@ export const useGame = create<GameStore>((set, get) => {
       const world = redistribute(next, player, viewportHalf / zoom);
       next = { ...next, world };
 
-      commit(next, { slots: [null, null], dialog, dialogIndex: 0 });
+      commit(next, {
+        slots: [null, null],
+        dialog,
+        dialogIndex: 0,
+        // 产物架（UI 批次 · 分区改版）：最新造出的压到最前，封顶 RECENT_CRAFTS_MAX。
+        // 读的是本次 commit 前的 recentCrafts（get() 取当前态），所以不会把自己算重。
+        recentCrafts: [output.id, ...get().recentCrafts].slice(0, RECENT_CRAFTS_MAX),
+      });
 
       if (res.ending) {
         set({ screen: 'ending' });
@@ -1038,6 +1072,9 @@ export const useGame = create<GameStore>((set, get) => {
         logOpen: false,
         codexOpen: false,
         ngPlusConfirmOpen: false,
+        // 新周目 = 重新降落：产物架与走近信息卡都清空
+        recentCrafts: [],
+        focusItem: null,
       });
       // 「开新周目」也是一次**世界归零**，所以同样要处理云端旧档。
       //

@@ -471,6 +471,81 @@ button:focus:not(:focus-visible) {
   line-height: var(--lh-body);
 }
 
+/* ═══════════════════ 走近信息卡（分区改版）═══════════════════ */
+
+/* 与 HintBar / TutorBar 同底同槽，z 高一级：走近物品时盖住合成提示。
+   容器 pointer-events:none —— 点卡片空白要能落到画布上继续移动，只有按钮可点。 */
+.infocard {
+  position: absolute;
+  left: var(--sp-2);
+  bottom: calc(var(--dialogue-h-expanded) + var(--sp-2) + var(--safe-bottom));
+  z-index: calc(var(--z-hint) + 1);
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  max-width: min(460px, calc(100% - var(--sp-4)));
+  padding: var(--sp-2) var(--sp-3);
+  border: var(--stroke) solid var(--ink);
+  border-radius: var(--radius-ui);
+  background: var(--paper);
+  box-shadow: var(--shadow);
+  pointer-events: none;
+}
+
+.infocard__body {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.infocard__name {
+  font-size: var(--fs-xs);
+  font-weight: 800;
+  line-height: var(--lh-ui);
+}
+
+.infocard__tags {
+  margin-top: 2px;
+  font-size: var(--fs-2xs);
+  color: var(--ink-soft);
+  line-height: var(--lh-ui);
+}
+
+.infocard__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  pointer-events: auto;
+}
+
+.infocard__view {
+  width: var(--tap-min);
+  height: var(--tap-min);
+  border: var(--stroke-thin) solid var(--ink);
+  border-radius: var(--radius-ui);
+  background: var(--cream);
+  font-size: var(--fs-xs);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.infocard__pick {
+  min-height: var(--tap-min);
+  padding: 0 var(--sp-4);
+  border: var(--stroke) solid var(--ink);
+  border-radius: var(--radius-ui);
+  background: var(--orange);
+  color: var(--ink);
+  font-size: var(--fs-xs);
+  font-weight: 800;
+  box-shadow: var(--shadow);
+  cursor: pointer;
+}
+
+.infocard__pick:active {
+  transform: translate(3px, 3px);
+  box-shadow: var(--shadow-press);
+}
+
 /* ═══════════════════ T7 引导条 ═══════════════════ */
 
 .tutor {
@@ -599,6 +674,73 @@ button:focus:not(:focus-visible) {
   margin: var(--sp-2, 8px) 0 0;
   font-size: var(--fs-2xs);
   color: var(--orange, #ff6b35);
+}
+
+/* ── 产物架（分区改版）：合成完成物的专属区，与背包 / 地面三分天下 ── */
+.results {
+  padding-bottom: var(--sp-3);
+  border-bottom: var(--stroke-thin) dashed var(--ink-soft);
+  margin-bottom: var(--sp-3);
+}
+
+.results__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: var(--sp-2);
+}
+
+.results__title {
+  font-size: var(--fs-xs);
+  font-weight: 800;
+}
+
+.results__meta {
+  font-size: var(--fs-2xs);
+  color: var(--ink-soft);
+}
+
+.results__empty {
+  margin: 0;
+  font-size: var(--fs-2xs);
+  color: var(--ink-soft);
+  line-height: var(--lh-body);
+}
+
+.results__row {
+  display: flex;
+  gap: var(--sp-2);
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  padding-bottom: 2px;
+}
+
+.results__chip {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  width: 60px;
+  padding: var(--sp-1);
+  border: var(--stroke-thin) solid var(--ink);
+  border-radius: var(--radius-ui);
+  background: var(--cream);
+  cursor: pointer;
+}
+
+.results__chip:active {
+  transform: translate(2px, 2px);
+}
+
+.results__chipname {
+  font-size: 11px;
+  line-height: var(--lh-ui);
+  text-align: center;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .drawer__toggle {

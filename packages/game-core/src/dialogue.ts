@@ -92,7 +92,7 @@ export const DIALOGUE: Readonly<Record<DialogueKey, string[]>> = Object.freeze({
   ],
   // ── T7 引导专用：只在引导期内各出现一次，说完就静音 ──
   tutPickup: [
-    '捡到了。靠近就会自动进包——这星球连捡取按钮都懒得配。',
+    '捡到了。走近会弹出信息卡，点「拾取」才进包——这星球总算给你配了个按钮。',
   ],
   tutCraft: [
     '第一次合成。从今天起你算是正经手艺人——工资是没有的，风险自付。',

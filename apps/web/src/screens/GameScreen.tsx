@@ -28,6 +28,7 @@ import { rocketSlots, builtProps } from '../lib/monuments';
 import { Hud } from '../components/Hud';
 import { HintBar } from '../components/HintBar';
 import { TutorBar } from '../components/TutorBar';
+import { ItemInfoCard } from '../components/ItemInfoCard';
 import { BagDrawer } from '../components/BagDrawer';
 import { LogPanel } from '../components/LogPanel';
 import { DialogueBar } from '../components/DialogueBar';
@@ -96,6 +97,7 @@ export function GameScreen() {
   const setMoveTarget = useGame((s) => s.setMoveTarget);
   const setPlayerPos = useGame((s) => s.setPlayerPos);
   const collect = useGame((s) => s.collect);
+  const setFocusItem = useGame((s) => s.setFocusItem);
   const say = useGame((s) => s.say);
   const setViewportHalf = useGame((s) => s.setViewportHalf);
   const refreshWorld = useGame((s) => s.refreshWorld);
@@ -175,6 +177,7 @@ export function GameScreen() {
           monuments={monuments}
           onMoveTo={setMoveTarget}
           onCollect={collect}
+          onFocusItem={setFocusItem}
           onPlayerPos={setPlayerPos}
           onAreaBlocked={onAreaBlocked}
         />
@@ -183,6 +186,7 @@ export function GameScreen() {
       <Hud />
       <TutorBar />
       <HintBar />
+      <ItemInfoCard />
       <BagDrawer />
       <LogPanel />
       <DialogueBar lines={dialog} index={dialogIndex} onAdvance={advanceDialog} />

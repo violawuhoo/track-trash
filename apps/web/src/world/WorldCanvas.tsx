@@ -82,8 +82,10 @@ export interface WorldCanvasProps {
   player: Vec2;
   /** 点击地面：世界坐标（已夹进可走圆）。接到 `store.setMoveTarget` */
   onMoveTo?: (x: number, y: number) => void;
-  /** 走进 40 单位拾取半径：物品 uid。接到 `store.collect` */
+  /** 点击地上的物品：物品 uid。接到 `store.collect`（拾取改为点击触发，不再走近自动入包） */
   onCollect?: (uid: string) => void;
+  /** 走近物品、焦点变化时上报最近的那件（信息卡用）。离开范围上报 null */
+  onFocusItem?: (item: PlacedItem | null) => void;
   /** 走进未解锁扇区（会被人为挡住）。接到 `store` 的 blockedArea 并出台词 */
   onAreaBlocked?: (area: AreaId) => void;
   /** 每帧上報一次位置。接到 `store.setPlayerPos`（内部不得持久化） */
@@ -113,8 +115,11 @@ const WALK_FPS = 9;
 const MAX_DT = 0.05;
 /** 同一个未解锁扇区的台词节流 */
 const BLOCK_THROTTLE = 1200;
-/** 同一个物品的自动拾取节流（防止 T4 还没把它从数据里移除时连环触发） */
-const COLLECT_THROTTLE = 700;
+/**
+ * 点击命中物品的判定半径（世界单位）。
+ * 比 `pickupRadius`（40）略大：拾取改成「点击触发」后，手机上点小贴纸要宽容一点。
+ */
+const ITEM_TAP_RADIUS = 44;
 
 const PLAYER_STAND_STEP = 2;
 
@@ -271,7 +276,8 @@ function mountRuntime(app: Application, host: HTMLDivElement, propsRef: PropsRef
   let emitted: Vec2 = { x: pos.x, y: pos.y };
   /** 上一次看到的 player prop 对象。只在它换新对象时才考虑跳转 */
   let seenPlayerProp: Vec2 | null = first.player;
-  const collected = new Map<string, number>();
+  /** 上一次上报的焦点物品 uid。只在它变化时触发 onFocusItem，避免每帧刷屏 */
+  let lastFocusUid: string | null = null;
   let blocked: { area: AreaId; at: number } | null = null;
   let label = '';
   let labelAt = 0;
@@ -333,10 +339,6 @@ function mountRuntime(app: Application, host: HTMLDivElement, propsRef: PropsRef
     if (props.items !== items) {
       items = props.items;
       field.sync(items, now);
-      // 已拾取的 uid 清理掉，别让 Map 无限长
-      for (const uid of [...collected.keys()]) {
-        if (!items.some((it) => it.uid === uid)) collected.delete(uid);
-      }
     }
     if (props.lockedAreas !== undefined && props.lockedAreas !== locked) {
       const same =
@@ -439,26 +441,27 @@ function mountRuntime(app: Application, host: HTMLDivElement, propsRef: PropsRef
     }
     playerNode.root.position.set(pos.x, pos.y);
 
-    // 6) 物品层 + 自动拾取 + 对焦
+    // 6) 物品层 + 对焦（拾取改为点击触发：见 onTap 的命中判定）
     field.tick(dt * 1000, now, pos, reduced);
 
-    let focus: string | null = null;
+    // 最近的那件物品（focusRadius 内）高亮，并作为「走近展示」的信息卡数据源。
+    let focus: PlacedItem | null = null;
     let focusDist: number = WORLD.focusRadius;
     for (const it of items) {
       const d = Math.hypot(it.x - pos.x, it.y - pos.y);
       if (d < focusDist) {
         focusDist = d;
-        focus = it.uid;
-      }
-      if (d <= WORLD.pickupRadius) {
-        const last = collected.get(it.uid);
-        if (last === undefined || now - last > COLLECT_THROTTLE) {
-          collected.set(it.uid, now);
-          props.onCollect?.(it.uid);
-        }
+        focus = it;
       }
     }
-    field.setHighlight(focus);
+    field.setHighlight(focus ? focus.uid : null);
+
+    // 焦点变化才上报：每次走近一件新物品 → 弹一次信息卡；走开/捡完 → 上报 null。
+    const focusUid = focus ? focus.uid : null;
+    if (focusUid !== lastFocusUid) {
+      lastFocusUid = focusUid;
+      props.onFocusItem?.(focus);
+    }
 
     // 7) 相机（死区跟随 + 圆形夹紧）
     cam = follow({ ...cam, zoom: clampZoom(props.zoom ?? cam.zoom) }, pos, viewport);
@@ -483,6 +486,21 @@ function mountRuntime(app: Application, host: HTMLDivElement, propsRef: PropsRef
   // ── 输入 ──
   const unbindInput = bindInput(host, {
     onTap: (worldPoint) => {
+      // 点击优先判定物品：点中地上的东西 = 拾取（不移动）；点空处才走移动。
+      let picked: PlacedItem | null = null;
+      let pickedDist = ITEM_TAP_RADIUS;
+      for (const it of items) {
+        const d = Math.hypot(it.x - worldPoint.x, it.y - worldPoint.y);
+        if (d < pickedDist) {
+          pickedDist = d;
+          picked = it;
+        }
+      }
+      if (picked) {
+        propsRef.current.onCollect?.(picked.uid);
+        return;
+      }
+
       const clamped = clampToWalkable(worldPoint);
       // 点进雾障里不动 —— 看不见的地方不该能走
       const hit = blockedAreaAt(clamped);

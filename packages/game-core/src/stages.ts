@@ -45,7 +45,7 @@ export const STAGES: StageDef[] = [
   {
     id: 1,
     name: '迫降期',
-    blurb: '把信号器修好，让外面知道这里还有人。',
+    blurb: '把信号器修好。回家的路，要从知道「外面在哪」开始。',
     unlock: ['crash'],
     steps: [
       { id: 's1-1', requires: ['导电', '粘'], output: 'wire' },
@@ -56,7 +56,7 @@ export const STAGES: StageDef[] = [
   {
     id: 2,
     name: '探索期',
-    blurb: '有个能挡风、能躺下、能关门的地方，人才算安顿下来。',
+    blurb: '安顿下来是顺手的事。正经任务：这颗星球的垃圾里，藏着能上天的东西。',
     unlock: ['junkyard'],
     steps: [
       { id: 's2-1', requires: ['实体', '实体'], output: 'windbreak' },
@@ -67,7 +67,7 @@ export const STAGES: StageDef[] = [
   {
     id: 3,
     name: '建设期',
-    blurb: '能造出东西了。接下来造什么，你定。',
+    blurb: '造告示、发电机、时漏——不为逃离，为「能造东西」这件事本身。火箭零件在路上。',
     unlock: ['market', 'cave'],
     // 三步目标链（GDD §2.1）。每步都有一条同构精确配方（recipes.ts R7/R8/R9），
     // 但不是唯一路径 —— 标签并集覆盖 requires 即通过。
@@ -91,16 +91,21 @@ export const STAGE_KEEPSAKES: Readonly<Record<1 | 2 | 3, string>> = Object.freez
 });
 
 /**
- * 阶段 3 的四条支线。完成任意一条即可进入收尾，
- * 但只有「造飞船」分支能起飞。
+ * 支线（世界线）。完成任意一条即可进入收尾，
+ * 飞船线是回家主线；其余四条是「偏离主线的方向」——
+ * 玩家的合成行为把某条线的关键物品攒够时，web 层浮现邀请提示（worldlines.ts），
+ * 但完成判定始终自动：背包集齐槽位即达成。
  */
 export const BRANCHES: BranchDef[] = [
   {
     id: 'ship',
     name: '造飞船',
-    slots: ['动力', '外壳', '生命维持'],
+    // 四槽制：原三件套 + 导航槽。这样操纵杆 / 差不多电池 / 输掉的下午 /
+    // 旋转器 / 社交引擎这些 ship 部件全部计入通关，不再是「合出来没用」的废件。
+    slots: ['动力', '导航', '外壳', '生命维持'],
     requires: [
-      ['optimistic', 'theoryfuel'],
+      ['optimistic', 'theoryfuel', 'spinner', 'socialengine'],
+      ['joystick', 'bat2', 'lostafternoon'],
       ['doorthing', 'doorplate', 'hullplate'],
       ['ration', 'hopefood', 'hotsandwich'],
     ],
@@ -137,6 +142,16 @@ export const BRANCHES: BranchDef[] = [
     keepsake: 'ks_stay',
     ending: 'stay',
   },
+  // 第五支线「混沌线」。莫名其妙的合成物合到底，合出来的是你自己。
+  // 三个槽位全部按具体物品 id 判定（意外产物链）。
+  {
+    id: 'chaos',
+    name: '搞清楚自己是什么',
+    slots: ['轮廓', '声音', '答案'],
+    requires: [['selfthing'], ['selfvoice'], ['selfanswer']],
+    keepsake: 'ks_chaos',
+    ending: 'chaos',
+  },
 ];
 
 /** 飞船三件套，用于起飞判定 */
@@ -152,5 +167,6 @@ export const ENDINGS: Readonly<
   teashop: { id: 'teashop', title: '开奶茶店', subtitle: '宇宙尽头，一杯差不多。' },
   birthday: { id: 'birthday', title: '给石头过生日', subtitle: '它唱了一首没人听懂的歌。' },
   stay: { id: 'stay', title: '留下来', subtitle: '你没有走。石头多了一个会回来的邻居。' },
+  chaos: { id: 'chaos', title: '说清了', subtitle: '你终于知道自己是什么了。' },
   free: { id: 'free', title: '自由模式', subtitle: '没有目标了。这可能是最好的结局。' },
 });

@@ -48,7 +48,7 @@ interface CloudSave {
 export function progressScoreOf(s: {
   stage: number;
   stepIndex: number;
-  branches: { ship: boolean; teashop: boolean; birthday: boolean; stay: boolean };
+  branches: { ship: boolean; teashop: boolean; birthday: boolean; stay: boolean; chaos: boolean };
   day: number;
   ngPlus?: { cycle: number } | boolean | unknown;
 }): number {

@@ -57,7 +57,7 @@ describe('A2 · 第四支线 stay', () => {
     expect(stay.keepsake).toBe('ks_stay');
     expect(stay.ending).toBe('stay');
     // 四条支线
-    expect(BRANCHES.map((b) => b.id)).toEqual(['ship', 'teashop', 'birthday', 'stay']);
+    expect(BRANCHES.map((b) => b.id)).toEqual(['ship', 'teashop', 'birthday', 'stay', 'chaos']);
   });
 
   it('⑩ 三个槽位各齐一件即达成；发 ks_stay；完成即进结局', () => {
@@ -118,7 +118,7 @@ describe('A2 · 第四支线 stay', () => {
     const s: SaveState = {
       ...createInitialState(),
       stage: 3,
-      branches: { ship: false, teashop: false, birthday: false, stay: true },
+      branches: { ship: false, teashop: false, birthday: false, stay: true, chaos: false },
     };
     const list = availableEndings(s);
     expect(list).toContain('stay');
@@ -138,8 +138,8 @@ describe('A2 · 第四支线 stay', () => {
     });
     // 不 bump schemaVersion（本批只加字段，老档走归一化）
     expect(s.schemaVersion).toBe(1);
-    // branches 初始形状含 stay
-    expect(s.branches).toEqual({ ship: false, teashop: false, birthday: false, stay: false });
+    // branches 初始形状含 stay / chaos
+    expect(s.branches).toEqual({ ship: false, teashop: false, birthday: false, stay: false, chaos: false });
   });
 
   it('⑬ ENDINGS.stay 与 ENDING_LINES.stay 与 GDD §3.3 一致', () => {
@@ -224,9 +224,10 @@ describe('P0 · 支线完成时 ending 落盘', () => {
   });
 
   it('ship 支线完成不自动进结局（玩家自己决定何时起飞）', () => {
-    // 飞船三件套：optimistic / doorthing / ration
+    // 飞船四件套：动力 optimistic / 导航 joystick / 外壳 doorthing / 生命维持 ration
     const state = stage3DoneState({
       optimistic: 1,
+      joystick: 1,
       doorthing: 1,
       ration: 1,
       mood: 1,

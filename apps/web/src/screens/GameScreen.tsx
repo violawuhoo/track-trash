@@ -24,6 +24,7 @@ import { useEffect, useMemo, useRef } from 'react';
 import { lines, type AreaId } from '@haola/game-core';
 import { lockedAreasFor, useGame } from '../store/gameStore';
 import { WorldCanvas } from '../world/WorldCanvas';
+import { rocketSlots, builtProps } from '../lib/monuments';
 import { Hud } from '../components/Hud';
 import { HintBar } from '../components/HintBar';
 import { TutorBar } from '../components/TutorBar';
@@ -87,6 +88,8 @@ export function GameScreen() {
   const spawn = useGame((s) => s.spawn);
   const zoom = useGame((s) => s.zoom);
   const stage = useGame((s) => s.save.stage);
+  const bag = useGame((s) => s.save.bag);
+  const built = useGame((s) => s.save.built);
   const dialog = useGame((s) => s.dialog);
   const dialogIndex = useGame((s) => s.dialogIndex);
 
@@ -116,6 +119,18 @@ export function GameScreen() {
 
   /** 未解锁扇区（画雾障 + 挡人）。按 stage 推导，引用稳定 */
   const lockedAreas = useMemo(() => lockedAreasFor(stage), [stage]);
+
+  /**
+   * 纪念物（乐趣改版 ⑤）：火箭完成段数 + 落地成景清单。
+   * 只在合成 / 拾取飞船部件时变，memo 保证引用稳定（世界层靠内容 key 比较同步）。
+   */
+  const monuments = useMemo(
+    () => ({
+      rocket: rocketSlots(bag, built).filter(Boolean).length,
+      props: builtProps(built),
+    }),
+    [bag, built],
+  );
 
   /**
    * `viewportHalf`：屏幕短边一半（CSS px）。
@@ -157,6 +172,7 @@ export function GameScreen() {
           player={spawn}
           zoom={zoom}
           lockedAreas={lockedAreas}
+          monuments={monuments}
           onMoveTo={setMoveTarget}
           onCollect={collect}
           onPlayerPos={setPlayerPos}

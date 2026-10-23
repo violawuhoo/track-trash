@@ -47,12 +47,13 @@ import type {
   SaveState,
 } from './types';
 
-/** 全部合法结局 id（图鉴 5 格）。用于归一化时过滤脏数据。 */
+/** 全部合法结局 id（图鉴 6 格）。用于归一化时过滤脏数据。 */
 export const ENDING_IDS: readonly EndingId[] = Object.freeze([
   'leave',
   'teashop',
   'birthday',
   'stay',
+  'chaos',
   'free',
 ]);
 
@@ -62,6 +63,7 @@ export const BRANCH_IDS: readonly BranchId[] = Object.freeze([
   'teashop',
   'birthday',
   'stay',
+  'chaos',
 ]);
 
 /** 新周目的空档案（一周目） */
@@ -362,7 +364,7 @@ export function startNextCycle(state: SaveState): SaveState {
     buildDone: false,
     crafts: 0,
     logsFound: [],
-    branches: { ship: false, teashop: false, birthday: false, stay: false },
+    branches: { ship: false, teashop: false, birthday: false, stay: false, chaos: false },
     accidents: 0,
     log: [
       {

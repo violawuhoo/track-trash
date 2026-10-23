@@ -126,7 +126,7 @@ describe('B. startNextCycle（保留 / 重置清单，GDD §7.1）', () => {
       bag: { tape: 2, manual: 1 },
       discovered: { tape: true },
       keepsakes: ['ks_ship', 'ks_stay'],
-      branches: { ship: true, teashop: false, birthday: true, stay: true },
+      branches: { ship: true, teashop: false, birthday: true, stay: true, chaos: false },
       logsFound: ['L1', 'L3'],
       accidents: 5,
       ending: 'stay',
@@ -174,6 +174,7 @@ describe('B. startNextCycle（保留 / 重置清单，GDD §7.1）', () => {
       teashop: false,
       birthday: false,
       stay: false,
+      chaos: false,
     });
     expect(next.accidents).toBe(0);
     expect(next.ending).toBeNull();
@@ -340,7 +341,7 @@ describe('C. continueAfterEnding（留在这里继续 = 不清档）', () => {
       ending: 'stay',
       keepsakes: ['ks_stay'],
       logsFound: ['L2'],
-      branches: { ship: false, teashop: false, birthday: false, stay: true },
+      branches: { ship: false, teashop: false, birthday: false, stay: true, chaos: false },
       day: 30,
       bag: { tape: 1 },
       ngPlus: {
@@ -411,8 +412,10 @@ describe('E. 三处记账（幂等 + 只记合法 id）', () => {
   });
 
   it('E4 合法 id 集合与图鉴 / 支线定义一致', () => {
-    expect([...ENDING_IDS].sort()).toEqual(['birthday', 'free', 'leave', 'stay', 'teashop']);
-    expect([...BRANCH_IDS].sort()).toEqual(['birthday', 'ship', 'stay', 'teashop']);
+    expect([...ENDING_IDS].sort()).toEqual([
+      'birthday', 'chaos', 'free', 'leave', 'stay', 'teashop',
+    ]);
+    expect([...BRANCH_IDS].sort()).toEqual(['birthday', 'chaos', 'ship', 'stay', 'teashop']);
   });
 });
 

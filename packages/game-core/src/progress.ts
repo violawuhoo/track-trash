@@ -45,13 +45,15 @@
  * 现在跟公式一起改。
  */
 
-/** 支线完成集合。四条支线权重相同（各 200）。 */
+/** 支线完成集合。五条支线权重相同（各 200）。 */
 export interface ProgressBranches {
   ship?: boolean;
   teashop?: boolean;
   birthday?: boolean;
   /** 第四支线「留下来」（A2）。老存档没这个键 → 视为 false */
   stay?: boolean;
+  /** 第五支线「混沌线」（世界线批次）。老存档没这个键 → 视为 false */
+  chaos?: boolean;
 }
 
 /**
@@ -89,7 +91,8 @@ export function progressScoreOf(s: ProgressScoreInput): number {
     (s.branches.ship ? 1 : 0) +
     (s.branches.teashop ? 1 : 0) +
     (s.branches.birthday ? 1 : 0) +
-    (s.branches.stay ? 1 : 0);
+    (s.branches.stay ? 1 : 0) +
+    (s.branches.chaos ? 1 : 0);
   const cycle = normalizeCycle(s.cycle);
   return (
     cycle * CYCLE_SCORE_WEIGHT +

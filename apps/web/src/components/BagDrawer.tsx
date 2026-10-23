@@ -7,7 +7,7 @@
  * 遮罩点击关闭；关闭不重置任何东西（世界层不卸载，角色位置不动）。
  */
 import { useCallback, useEffect, useState } from 'react';
-import { BRANCHES, launchCheck } from '@haola/game-core';
+import { BAG_CAP, BRANCHES, bagSlots, launchCheck } from '@haola/game-core';
 import { useGame } from '../store/gameStore';
 import { ItemCard } from './ItemCard';
 import { CraftSlots } from './CraftSlots';
@@ -55,6 +55,7 @@ export function BagDrawer() {
   const toggleSlot = useGame((s) => s.toggleSlot);
   const clearSlot = useGame((s) => s.clearSlot);
   const craft = useGame((s) => s.craft);
+  const drop = useGame((s) => s.drop);
   const view = useGame((s) => s.view);
   const doLaunch = useGame((s) => s.doLaunch);
   const chooseEnding = useGame((s) => s.chooseEnding);
@@ -62,6 +63,7 @@ export function BagDrawer() {
   // 稳定回调：ItemCard 是 memo 的，匿名闭参会每次都变、让 memo 失效
   const onSelect = useCallback((id: string) => toggleSlot(id), [toggleSlot]);
   const onView = useCallback((id: string) => view(id), [view]);
+  const onDrop = useCallback((id: string) => drop(id), [drop]);
 
   /**
    * 关闭态跳过抽屉体的布局与绘制（T10-QW1 收尾）。
@@ -100,6 +102,8 @@ export function BagDrawer() {
 
   const bagIds = Object.keys(bag).filter((id) => (bag[id] ?? 0) > 0);
   const total = bagIds.reduce((n, id) => n + (bag[id] ?? 0), 0);
+  const slotsUsed = bagSlots(bag);
+  const bagFull = slotsUsed >= BAG_CAP;
   const mode = launchCheck(bag);
   const showLaunch = stage === 3 && mode !== 'none';
 
@@ -118,8 +122,8 @@ export function BagDrawer() {
       >
         <div className="drawer__head">
           <span className="drawer__title">背包</span>
-          <span className="drawer__meta">
-            {bagIds.length} 种 · {total} 件
+          <span className={`drawer__meta ${bagFull ? 'drawer__meta--full' : ''}`}>
+            {slotsUsed}/{BAG_CAP} 格 · {total} 件{bagFull ? ' · 满了' : ''}
           </span>
           <button
             type="button"
@@ -150,10 +154,16 @@ export function BagDrawer() {
                     selected={slots.includes(id)}
                     onSelect={onSelect}
                     onView={onView}
+                    onDrop={onDrop}
                     showHelp
                   />
                 ))}
               </div>
+            )}
+            {bagFull && (
+              <p className="drawer__fulltip">
+                背包装满了。合成掉或者扔掉一些，才能捡新东西。
+              </p>
             )}
           </div>
 
@@ -233,6 +243,15 @@ export function BagDrawer() {
                   onClick={() => chooseEnding('stay')}
                 >
                   留下来
+                </button>
+              )}
+              {branches.chaos && (
+                <button
+                  type="button"
+                  className="btn btn--block"
+                  onClick={() => chooseEnding('chaos')}
+                >
+                  说清了
                 </button>
               )}
               <button

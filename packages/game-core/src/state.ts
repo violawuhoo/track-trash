@@ -4,6 +4,7 @@ import { launchCheck, rollLaunch, allBranchStatus } from './launch';
 import { CARRIER_TO_LOG } from './logs';
 import { createNgPlus, recordBranch, recordEnding } from './ngplus';
 import { resolveMix } from './resolve';
+import { recipeWhy } from './recipes';
 import { pickSearchWithHints } from './search';
 import { AREAS, BRANCHES, STAGE_KEEPSAKES } from './stages';
 import type {
@@ -17,6 +18,58 @@ import type {
 
 export const SCHEMA_VERSION = 1;
 export const MAX_LOG = 200;
+
+/**
+ * 背包容量（按「种类格」计，同种堆叠不占新格）。
+ *
+ * 这是乐趣改版（2026-10-22）的核心约束：没有容量就没有取舍——
+ * 「捡这个还是捡那个」「留原料还是留成品」只有在格子有限时才成立。
+ * 满包时：合成照常（净减格数，是腾空间的方式），拾取被挡，扔掉可以腾格。
+ */
+export const BAG_CAP = 10;
+
+/** 背包占了多少格 */
+export function bagSlots(bag: Record<string, number>): number {
+  let n = 0;
+  for (const v of Object.values(bag)) {
+    if (v > 0) n++;
+  }
+  return n;
+}
+
+/**
+ * 能不能拿起 incoming 这件东西。
+ * 已有种类不占新格（堆叠）；新种类在满格时被挡。
+ */
+export function canTake(
+  bag: Record<string, number>,
+  incomingId: string,
+): boolean {
+  if ((bag[incomingId] ?? 0) > 0) return true;
+  return bagSlots(bag) < BAG_CAP;
+}
+
+/**
+ * 杰作率：合成有 20% 概率「手感出奇地好」，产出 ×2。
+ * 确定性 roll（同 day + 同材料永远同结果）——可测试、可复现、不依赖 rng 注入。
+ */
+export const MASTERPIECE_RATE = 20;
+
+export function isMasterpieceCraft(
+  day: number,
+  a: string,
+  b: string,
+): boolean {
+  // 合成无序（a+b 与 b+a 同一配方）→ 哈希键排序，保证对称
+  const key = [a, b].sort().join('|');
+  let h = 2166136261;
+  const s = `${key}|${day}`;
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return (h >>> 0) % 100 < MASTERPIECE_RATE;
+}
 
 /** 新游戏 */
 export function createInitialState(): SaveState {
@@ -35,7 +88,7 @@ export function createInitialState(): SaveState {
     ngPlus: createNgPlus(),
     crafts: 0,
     logsFound: [],
-    branches: { ship: false, teashop: false, birthday: false, stay: false },
+    branches: { ship: false, teashop: false, birthday: false, stay: false, chaos: false },
     keepsakes: [],
     accidents: 0,
     log: [{ day: 1, kind: '系统', text: '迫降完成。信号器是坏的。' }],
@@ -88,6 +141,25 @@ export function hasPair(
 }
 
 /**
+ * 扔掉一整叠（腾出一个格子）。被扔的东西直接消失——
+ * 星球不缺垃圾，不心疼；不做「扔回地面」，避免无限刷保底点的漏洞。
+ */
+export function dropItem(state: SaveState, id: string): SaveState | null {
+  if ((state.bag[id] ?? 0) <= 0) return null;
+  const bag = { ...state.bag };
+  delete bag[id];
+  return {
+    ...state,
+    bag,
+    log: appendLog(state.log, {
+      day: state.day,
+      kind: '系统',
+      text: `扔掉了「${getItem(id).name}」。背包腾出一个格子。`,
+    }),
+  };
+}
+
+/**
  * 搜索区域：+1 天，重刷场景。
  *
  * ⚠️ **v1 遗留 API，v2 的 web 端没有调用方**（v2 删掉了「搜索」按钮，物品固定铺在地面）。
@@ -131,13 +203,14 @@ export interface PickResult {
   firstTime: boolean;
 }
 
-/** 拾取场景中的物品（不耗天数） */
+/** 拾取场景中的物品（不耗天数）。满包拿不动新种类 → null */
 export function pickFromScene(
   state: SaveState,
   itemId: string,
 ): PickResult | null {
   const idx = state.scene.indexOf(itemId);
   if (idx < 0) return null;
+  if (!canTake(state.bag, itemId)) return null;
 
   const scene = [...state.scene];
   scene.splice(idx, 1);
@@ -169,6 +242,8 @@ export type CraftResult =
       state: SaveState;
       outcome: MixOutcome;
       dialogueKey: DialogueKey | null;
+      /** 杰作：这次合成手感出奇地好，产出 ×2 */
+      masterpiece: boolean;
       ending?: EndingId;
     }
   | { ok: false; reason: string };
@@ -204,14 +279,27 @@ export function craft(
   });
 
   const output = getItem(outcome.result.output);
+  // 杰作 roll（确定性）：20% 概率 ×2。变率奖励——奖励大小不可预测，才有抽奖感。
+  const masterpiece = isMasterpieceCraft(state.day, aId, bId);
   let next: SaveState = {
     ...state,
-    bag: addItem(bag, output.id),
+    bag: addItem(bag, output.id, masterpiece ? 2 : 1),
     day: state.day + 1,
     // 累计合成次数。GDD §6.2 的 L1 / L5 解锁条件挂在「合成次数 ≥ N」上，
     // 所以每一次成功的合成都要计数（含阶段目标命中与意外产物 —— 它们同样是「合成了一次」）。
     crafts: state.crafts + 1,
   };
+
+  if (masterpiece) {
+    next = {
+      ...next,
+      log: appendLog(next.log, {
+        day: next.day,
+        kind: '合成',
+        text: '手感出奇地好——同样的材料，多整出来一个。',
+      }),
+    };
+  }
 
   // 前任日志载体记账（C1 批次）。
   // 载体是普通合成产物，可以被消耗、可以重复合出 —— 所以记的是**日志 id 集合**，
@@ -304,6 +392,20 @@ export function craft(
           : `${getItem(aId).name} + ${getItem(bId).name} → ${output.name}。${output.desc}`,
       }),
     };
+    // 精确配方命中：把「合成理由」也写进日志——玩家翻日志时能对上账。
+    if (outcome.result.kind === 'recipe') {
+      const why = recipeWhy(aId, bId);
+      if (why) {
+        next = {
+          ...next,
+          log: appendLog(next.log, {
+            day: next.day,
+            kind: '合成',
+            text: why,
+          }),
+        };
+      }
+    }
     dialogueKey = isAccident ? 'accident' : 'craft';
   }
 
@@ -352,7 +454,14 @@ export function craft(
     }
   }
 
-  return { ok: true, state: next, outcome, dialogueKey, ...(ending ? { ending } : {}) };
+  return {
+    ok: true,
+    state: next,
+    outcome,
+    dialogueKey,
+    masterpiece,
+    ...(ending ? { ending } : {}),
+  };
 }
 
 /** 发起起飞。返回是否成功，以及新状态 */

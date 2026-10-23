@@ -8,7 +8,7 @@
  * - 热区靠 `::after` 补到 44px，视觉高度不变（设计系统 §8「热区与视觉分离」）。
  */
 import { useMemo } from 'react';
-import { readableLogs } from '@haola/game-core';
+import { leadingLine, readableLogs } from '@haola/game-core';
 import { useGame } from '../store/gameStore';
 
 const ZOOM_STEP = 0.2;
@@ -16,6 +16,9 @@ const ZOOM_STEP = 0.2;
 export function Hud() {
   const day = useGame((s) => s.save.day);
   const stage = useGame((s) => s.save.stage);
+  const bag = useGame((s) => s.save.bag);
+  // 世界线倾向：背包里哪条线的关键物品最多。只读展示，纯函数派生
+  const leading = useMemo(() => leadingLine(bag), [bag]);
   const bagCount = useGame((s) =>
     Object.values(s.save.bag).reduce((sum, n) => sum + n, 0),
   );
@@ -53,6 +56,7 @@ export function Hud() {
           <span>天</span>
         </span>
         <span className="hud__stage">阶段 {stage === 3 ? '3 · 建设' : stage}</span>
+        {leading && <span className="hud__stage">线 · {leading.name}</span>}
       </div>
 
       <div className="hud__group">

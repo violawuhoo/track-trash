@@ -1,11 +1,18 @@
 import { describe, expect, it } from 'vitest';
 import {
+  ACCIDENT_RULES,
+  BAG_CAP,
   BRANCHES,
+  FALLBACK_ITEM,
   ITEMS,
   RECIPES,
+  RISK_ITEM,
   STAGES,
+  bagSlots,
+  canTake,
   craft,
   createInitialState,
+  dropItem,
   getItem,
   getStage,
   pickFromScene,
@@ -81,9 +88,20 @@ function play(seed: number, maxActions = 400): PlayResult {
     }
 
     if (state.scene.length > 0) {
-      const picked = pickFromScene(state, state.scene[0]!);
-      if (picked) {
-        state = picked.state;
+      const first = state.scene[0]!;
+      if (canTake(state.bag, first)) {
+        const picked = pickFromScene(state, first);
+        if (picked) {
+          state = picked.state;
+          continue;
+        }
+      } else {
+        // 背包满了：扔掉最早的一格再捡（模拟真实玩家的取舍——扔 → 腾格 → 继续捡）。
+        // 这同时验证「满包永远有出路」：扔是免费动作，不存在死锁。
+        const ids = Object.keys(state.bag);
+        const dropped = dropItem(state, ids[0]!);
+        if (!dropped) throw new Error('drop 失败');
+        state = dropped;
         continue;
       }
     }
@@ -100,6 +118,8 @@ describe('阶段 1 / 2 稳定性', () => {
     for (let seed = 1; seed <= 1000; seed++) {
       const { state } = play(seed);
       if (state.stage < 3) failures.push(seed);
+      // 背包容量不变量：任何路径下格数都不超上限
+      expect(bagSlots(state.bag), `seed ${seed}`).toBeLessThanOrEqual(BAG_CAP);
     }
     expect(failures).toEqual([]);
   });
@@ -131,10 +151,18 @@ describe('阶段 1 / 2 稳定性', () => {
 });
 
 describe('配方可达性', () => {
+  /** 可达闭包的种子：base 物品 + 意外表产物（玩家通过意外合成必能拿到） */
+  function reachableSeeds(): Set<string> {
+    return new Set<string>([
+      ...ITEMS.filter((i) => i.kind === 'base').map((i) => i.id),
+      ...ACCIDENT_RULES.map((r) => r.out),
+      RISK_ITEM,
+      FALLBACK_ITEM,
+    ]);
+  }
+
   it('所有配方产物都能从基础物品经过有限次合成得到', () => {
-    const reachable = new Set(
-      ITEMS.filter((i) => i.kind === 'base').map((i) => i.id),
-    );
+    const reachable = reachableSeeds();
 
     let changed = true;
     while (changed) {
@@ -152,10 +180,8 @@ describe('配方可达性', () => {
     }
   });
 
-  it('三条支线的每个槽位都有可达候选', () => {
-    const reachable = new Set(
-      ITEMS.filter((i) => i.kind === 'base').map((i) => i.id),
-    );
+  it('各条支线的每个槽位都有可达候选', () => {
+    const reachable = reachableSeeds();
     let changed = true;
     while (changed) {
       changed = false;

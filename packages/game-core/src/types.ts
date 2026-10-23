@@ -37,9 +37,9 @@ export type ItemKind =
   | 'accident'
   | 'keepsake';
 
-export type EndingId = 'leave' | 'teashop' | 'birthday' | 'stay' | 'free';
+export type EndingId = 'leave' | 'teashop' | 'birthday' | 'stay' | 'chaos' | 'free';
 
-export type BranchId = 'ship' | 'teashop' | 'birthday' | 'stay';
+export type BranchId = 'ship' | 'teashop' | 'birthday' | 'stay' | 'chaos';
 
 /**
  * 二周目档案容器（GDD §7.3）。
@@ -83,11 +83,19 @@ export interface Item {
   icon: string;
 }
 
-/** 精确配方。无序匹配，a/b 顺序无关。 */
+/**
+ * 精确配方。无序匹配，a/b 顺序无关。
+ *
+ * `why` 是这条配方的「合成理由」——一句话说清两个原料为什么能变成产物。
+ * 荒诞合成必须有可回溯的逻辑桥（功能继承 / 材质拼接 / 气质共鸣），
+ * 写不出 why 的配方不许入库（data.test 有断言守着）。
+ * 合成成功时 AI 把这句念给玩家听，玩家才会觉得「有点道理」。
+ */
 export interface Recipe {
   a: string;
   b: string;
   out: string;
+  why: string;
 }
 
 /** 意外匹配规则。两个基础标签无序配对。 */

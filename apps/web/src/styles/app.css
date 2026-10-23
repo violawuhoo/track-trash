@@ -588,6 +588,19 @@ button:focus:not(:focus-visible) {
   color: var(--ink-soft);
 }
 
+/* 背包满格：容量标转警示色（乐趣改版 ①） */
+.drawer__meta--full {
+  color: var(--orange, #ff6b35);
+  font-weight: 800;
+}
+
+/* 满格提示行 */
+.drawer__fulltip {
+  margin: var(--sp-2, 8px) 0 0;
+  font-size: var(--fs-2xs);
+  color: var(--orange, #ff6b35);
+}
+
 .drawer__toggle {
   margin-left: auto;
   min-height: var(--tap-min);
@@ -772,6 +785,33 @@ button:focus:not(:focus-visible) {
 
 /* 帮助角标视觉 23px 是刻意的，热区用 ::after 补到 ≥44 */
 .item__help::after {
+  content: '';
+  position: absolute;
+  inset: -11px;
+}
+
+/* 丢弃角标（乐趣改版 ①）：与帮助角标镜像，右上角 */
+.item__drop {
+  position: absolute;
+  right: -7px;
+  top: -9px;
+  width: 23px;
+  height: 23px;
+  border: var(--stroke-thin) solid var(--ink);
+  border-radius: 50%;
+  background: var(--orange);
+  color: var(--paper);
+  font-size: var(--fs-xs);
+  font-weight: 800;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  cursor: pointer;
+}
+
+.item__drop::after {
   content: '';
   position: absolute;
   inset: -11px;

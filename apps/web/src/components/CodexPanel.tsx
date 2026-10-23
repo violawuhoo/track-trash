@@ -49,6 +49,7 @@ const ENDING_ORDER: readonly EndingId[] = [
   'teashop',
   'birthday',
   'stay',
+  'chaos',
   'free',
 ];
 

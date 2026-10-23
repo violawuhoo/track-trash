@@ -10,6 +10,8 @@ interface Props {
   onSelect?: (id: string) => void;
   /** 点「?」：查看描述浮层 */
   onView?: (id: string) => void;
+  /** 点「×」：扔掉这一叠（背包容量满时腾格用） */
+  onDrop?: (id: string) => void;
   showHelp?: boolean;
 }
 
@@ -26,6 +28,7 @@ export const ItemCard = memo(function ItemCard({
   selected,
   onSelect,
   onView,
+  onDrop,
   showHelp,
 }: Props) {
   const item = getItem(id);
@@ -51,6 +54,19 @@ export const ItemCard = memo(function ItemCard({
           }}
         >
           ?
+        </span>
+      )}
+      {onDrop && (
+        <span
+          className="item__drop"
+          role="button"
+          aria-label={`扔掉${item.name}`}
+          onClick={(e) => {
+            e.stopPropagation();
+            onDrop(id);
+          }}
+        >
+          ×
         </span>
       )}
       {count !== undefined && count > 1 && <span className="item__count">{count}</span>}

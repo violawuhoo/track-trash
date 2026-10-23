@@ -71,6 +71,7 @@ import { FOG_SHAPE } from './assets/geometry';
 import { SPACE } from './assets/palette';
 import type { PlayerDir } from './assets/player';
 import { WORLD_STATS } from './diagnostics';
+import { createMonumentsLayer, type MonumentView } from './monuments';
 
 export interface WorldCanvasProps {
   /** 只用于样式定位。**必须给这个元素一个确定的尺寸**（世界层不猜布局） */
@@ -91,6 +92,11 @@ export interface WorldCanvasProps {
   zoom?: number;
   /** 未解锁区域（画雾障 + 挡住不让人进）。缺省 `[]` = 全部解锁 */
   lockedAreas?: readonly AreaId[];
+  /**
+   * 纪念物（乐趣改版 ⑤）：火箭完成段数 + 已落地成景的基地物品。
+   * 只在合成后变化；世界层靠内容比较决定是否重建。
+   */
+  monuments?: MonumentView;
 }
 
 // ───────────────────────── 手感常量 ─────────────────────────
@@ -233,6 +239,11 @@ function mountRuntime(app: Application, host: HTMLDivElement, propsRef: PropsRef
   const playerNode = createPlayerNode();
   layers.layers.actors.addChild(playerNode.root);
 
+  // ── 纪念物（火箭 + 基地景物）：垫在角色之下、地面物品之下 ──
+  const monuments = createMonumentsLayer();
+  layers.layers.actors.addChildAt(monuments.root, 0);
+  let lastMonumentsKey = '';
+
   // ── items ──
   retainTextures();
   prefetchPlayer();
@@ -339,6 +350,17 @@ function mountRuntime(app: Application, host: HTMLDivElement, propsRef: PropsRef
         // 重新挂一次缘：addChild 会把已有节点移到末尾，保证缘始终在最上面
         ground.addChild(rim);
       }
+    }
+
+    // 1.5) 纪念物同步：内容 key 变了才重建（低频，合成时才变）
+    if (props.monuments) {
+      const m = props.monuments;
+      const key = `${m.rocket}|${m.props.join(',')}`;
+      if (key !== lastMonumentsKey) {
+        lastMonumentsKey = key;
+        monuments.sync(m);
+      }
+      monuments.tick();
     }
 
     // 2) 外部要求跳转（换档 / 回坠毁点）。自己的回声不算

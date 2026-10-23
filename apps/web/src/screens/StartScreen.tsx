@@ -76,11 +76,11 @@ export function StartScreen() {
         <span style={{ background: 'var(--pink)' }} />
       </div>
       <p className="start__sub">
-        船坠毁了，星球是别人的旧垃圾场。
+        你说不清自己是什么。船坠毁在别人的旧垃圾场上。
         <br />
-        捡破烂、拼零件、修好信号器——
+        捡垃圾、拼零件、造一艘能回家的东西——
         <br />
-        或者留下来，开一家奶茶店。
+        合不成火箭的话，这颗星球上也有别的活法。
       </p>
       <div className="start__actions">
         <button className="btn btn--primary btn--block" onClick={newGame}>

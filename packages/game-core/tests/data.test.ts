@@ -54,6 +54,28 @@ describe('数据完整性', () => {
     expect(new Set(keys).size).toBe(keys.length);
   });
 
+  it('每条配方都有合成理由 why（≥6 字，写不出逻辑桥的配方不许入库）', () => {
+    for (const r of RECIPES) {
+      expect(typeof r.why, `配方 ${r.a}+${r.b} 缺 why`).toBe('string');
+      expect(r.why.length, `配方 ${r.a}+${r.b} 的 why 太短：${r.why}`).toBeGreaterThanOrEqual(6);
+    }
+  });
+
+  it('意外产物不是死胡同：每个 accident 物品（日志载体除外）都能继续参与合成', () => {
+    const ingredients = new Set<string>();
+    for (const r of RECIPES) {
+      ingredients.add(r.a);
+      ingredients.add(r.b);
+    }
+    const culprits = ITEMS.filter(
+      (i) =>
+        i.kind === 'accident' &&
+        !i.id.startsWith('log_') &&
+        !ingredients.has(i.id),
+    ).map((i) => `${i.name}(${i.id}) 没有任何二阶配方——莫名其妙的东西合不下去`);
+    expect(culprits).toEqual([]);
+  });
+
   it('意外规则引用的物品都存在', () => {
     for (const rule of ACCIDENT_RULES) {
       expect(ITEM_MAP[rule.out], rule.out).toBeDefined();

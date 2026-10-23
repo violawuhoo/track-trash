@@ -133,22 +133,36 @@ export {
   type Vec2,
 } from './world';
 export {
+  BAG_CAP,
+  MASTERPIECE_RATE,
   MAX_LOG,
   SCHEMA_VERSION,
   addItem,
   appendLog,
   attemptLaunch,
   availableEndings,
+  bagSlots,
+  canTake,
   craft,
   createInitialState,
+  dropItem,
   endingLines,
   finishGame,
   hasPair,
   hintMessage,
   isAreaUnlocked,
+  isMasterpieceCraft,
   pickFromScene,
   removeItem,
   searchArea,
   type CraftResult,
   type PickResult,
 } from './state';
+export {
+  WORLD_LINES,
+  activeInvites,
+  leadingLine,
+  lineAffinity,
+  type WorldLineDef,
+} from './worldlines';
+export { recipeWhy } from './recipes';

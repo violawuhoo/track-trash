@@ -112,19 +112,26 @@ export const ITEMS: Item[] = [
   { id: 'sewkit', name: '缝补工具包', desc: '针线齐全，能补衣服和轮胎。补飞船的活儿它接不了。', tags: ['委托', '实体'], kind: 'commission', color: 'yellow', icon: 'thread' },
   { id: 'neighbor', name: '邻居', desc: '一个会敲隔壁墙的邻居。敲的意思是「我还在」。', tags: ['委托', '抽象'], kind: 'commission', color: 'purple', icon: 'person' },
   { id: 'warmchair', name: '空椅子', desc: '有人搬走时没带走它。椅面朝着你的方向，摆得很正。', tags: ['委托', '实体'], kind: 'commission', color: 'mint', icon: 'chair' },
+  // 第五支线「混沌线」的三个槽位产物。原料全是意外产物——
+  // 这条线的意义：莫名其妙的合成物不是死胡同，合到底是「你自己」。
+  { id: 'selfthing', name: '快要说清了的轮廓', desc: '一个隐约像你的形状。再看一眼，又不太像——但比昨天像。', tags: ['委托', '抽象'], kind: 'commission', color: 'purple', icon: 'blob' },
+  { id: 'selfvoice', name: '自己的声音', desc: '从一堆外星心情里滤出来的那一句。你居然认得它。', tags: ['委托', '抽象'], kind: 'commission', color: 'mint', icon: 'wave' },
+  { id: 'selfanswer', name: '你终于知道自己是什么了', desc: '答案不长：一个为了回家而捡垃圾的东西。这就够了。', tags: ['委托', '知识'], kind: 'commission', color: 'yellow', icon: 'question' },
 
   // ───────── 意外产物 accident ─────────
-  { id: 'failedtaste', name: '失败的味道', desc: '尝起来像烧焦的塑料和一点点希望。', tags: ['意外', '风险'], kind: 'accident', color: 'orange', icon: 'smoke' },
-  { id: 'unclear', name: '说不清的东西', desc: '它有两个把手，和一个不知道干什么用的凸起。', tags: ['意外', '实体'], kind: 'accident', color: 'purple', icon: 'blob' },
-  { id: 'halfplan', name: '半个计划', desc: '前半段很清晰，后半段是「然后就……」。', tags: ['意外', '知识'], kind: 'accident', color: 'mint', icon: 'map' },
-  { id: 'gum', name: '外星口香糖', desc: '嚼起来有星尘味。吐出来会自己爬回去。', tags: ['意外', '外星', '粘'], kind: 'accident', color: 'pink', icon: 'gum' },
-  { id: 'opttape', name: '乐观胶带', desc: '粘性一般，但每次粘东西都会说「应该能行」。', tags: ['意外', '抽象', '粘'], kind: 'accident', color: 'yellow', icon: 'tape2' },
-  { id: 'wastepaper', name: '一页废纸', desc: '两面印着同一段话。内容不重要，重要的是它很干净。', tags: ['意外', '知识'], kind: 'accident', color: 'mint', icon: 'page' },
-  { id: 'alienink', name: '外星笔迹', desc: '看起来像数学，读起来像诗，用起来像废纸。', tags: ['意外', '外星', '知识'], kind: 'accident', color: 'purple', icon: 'scribble' },
-  { id: 'halfget', name: '懂了但没完全懂', desc: '你知道它在说什么，但不知道它为什么要说。', tags: ['意外', '抽象'], kind: 'accident', color: 'mint', icon: 'question' },
-  { id: 'unclear2', name: '更说不清的东西', desc: '比说不清的东西多一个把手。', tags: ['意外', '外星'], kind: 'accident', color: 'purple', icon: 'blob2' },
-  { id: 'alienmood', name: '外星心情', desc: '它不属于你，但你能感觉到它。类似别人的坏情绪。', tags: ['意外', '外星', '抽象'], kind: 'accident', color: 'pink', icon: 'aura' },
-  { id: 'complexmood', name: '复杂的情绪', desc: '同时觉得还好和不太行。两种感觉互相抵消，剩下困。', tags: ['意外', '抽象'], kind: 'accident', color: 'yellow', icon: 'wave' },
+  // desc 一律回指原料（「XX 和 YY 合出来的」）——玩家翻图鉴时能对上账，
+  // 这是「合成有点道理」的一半；另一半在 recipes.ts 的 why 字段。
+  { id: 'failedtaste', name: '失败的味道', desc: '带风险的东西一进合成槽，就会留下这个签名：烧焦的塑料和一点点希望。', tags: ['意外', '风险'], kind: 'accident', color: 'orange', icon: 'smoke' },
+  { id: 'unclear', name: '说不清的东西', desc: '两个实打实的东西挤在一起，挤出一个谁也说不清的东西。它有两个把手，和一个不知道干什么用的凸起。', tags: ['意外', '实体'], kind: 'accident', color: 'purple', icon: 'blob' },
+  { id: 'halfplan', name: '半个计划', desc: '实体出了骨架，知识出了细节，合起来只有半个计划——前半段很清晰，后半段是「然后就……」。', tags: ['意外', '知识'], kind: 'accident', color: 'mint', icon: 'map' },
+  { id: 'gum', name: '外星口香糖', desc: '实心的东西蹭上外星的边，就变成了它。嚼起来有星尘味，吐出来会自己爬回去。', tags: ['意外', '外星', '粘'], kind: 'accident', color: 'pink', icon: 'gum' },
+  { id: 'opttape', name: '乐观胶带', desc: '一半是实打实的材料，一半是说不清的乐观。粘性一般，但每次粘东西都会说「应该能行」。', tags: ['意外', '抽象', '粘'], kind: 'accident', color: 'yellow', icon: 'tape2' },
+  { id: 'wastepaper', name: '一页废纸', desc: '两份知识叠在一起，互相抵消成一页干净的废纸。两面印着同一段话，内容不重要，干净很重要。', tags: ['意外', '知识'], kind: 'accident', color: 'mint', icon: 'page' },
+  { id: 'alienink', name: '外星笔迹', desc: '知识和外星玩意儿一掺，写出来的东西看起来像数学，读起来像诗，用起来像废纸。', tags: ['意外', '外星', '知识'], kind: 'accident', color: 'purple', icon: 'scribble' },
+  { id: 'halfget', name: '懂了但没完全懂', desc: '知识够到了抽象的边，就够到这儿了。你知道它在说什么，但不知道它为什么要说。', tags: ['意外', '抽象'], kind: 'accident', color: 'mint', icon: 'question' },
+  { id: 'unclear2', name: '更说不清的东西', desc: '两个外星玩意儿叠罗汉，比说不清的东西更说不清，多一个把手。', tags: ['意外', '外星'], kind: 'accident', color: 'purple', icon: 'blob2' },
+  { id: 'alienmood', name: '外星心情', desc: '外星玩意儿染上了情绪。它不属于你，但你能感觉到它——类似别人的坏心情。', tags: ['意外', '外星', '抽象'], kind: 'accident', color: 'pink', icon: 'aura' },
+  { id: 'complexmood', name: '复杂的情绪', desc: '两种抽象搅在一起，同时觉得还好和不太行。两种感觉互相抵消，剩下困。', tags: ['意外', '抽象'], kind: 'accident', color: 'yellow', icon: 'wave' },
   { id: 'gambler', name: '赌徒的乐观', desc: '你确信下一把能赢。这个信念本身不产生任何东西，但它很亮。', tags: ['意外', '风险', '抽象'], kind: 'accident', color: 'orange', icon: 'dice' },
   { id: 'dud', name: '哑炮', desc: '两个都很想炸的东西凑齐了，互相抵消，只剩礼貌。安静得像从没被组装过。', tags: ['意外', '实体'], kind: 'accident', color: 'orange', icon: 'blob2' },
   // 前任日志载体（GDD §4.4）。8 件全落，配方见 recipes.ts R16–R23。
@@ -148,6 +155,7 @@ export const ITEMS: Item[] = [
   { id: 'ks_birthday', name: '石头生日蛋糕', desc: '不能吃，但石头很喜欢。它唱了一首歌。', tags: ['纪念品'], kind: 'keepsake', color: 'pink', icon: 'candle' },
   { id: 'ks_build', name: '建设纪念牌', desc: '三件东西做成的牌。它证明你在这里造出了东西，不只是捡到了东西。', tags: ['纪念品'], kind: 'keepsake', color: 'pink', icon: 'plaque' },
   { id: 'ks_stay', name: '留下纪念章', desc: '留在这颗星球的证明。章上没写日期，因为你还没打算走。', tags: ['纪念品'], kind: 'keepsake', color: 'orange', icon: 'sprout' },
+  { id: 'ks_chaos', name: '说不清徽章', desc: '混沌线的纪念。它证明你把自己合明白了——至少在徽章上是这样的。', tags: ['纪念品'], kind: 'keepsake', color: 'purple', icon: 'badge' },
 ];
 
 export const ITEM_MAP: Readonly<Record<string, Item>> = Object.freeze(

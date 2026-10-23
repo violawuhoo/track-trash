@@ -31,17 +31,21 @@ import {
   allBranchStatus,
   appendLog,
   attemptLaunch,
+  activeInvites,
   continueAfterEnding as coreContinueAfterEnding,
+  canTake,
   craft,
   createInitialState,
   createNgPlus,
   distribute,
+  dropItem as coreDropItem,
   finishGame,
   getItem,
   hintMessage,
   launchCheck,
   lines,
   normalizeNgPlus,
+  recipeWhy,
   recordReadLog,
   sectorCenter,
   startNextCycle as coreStartNextCycle,
@@ -53,8 +57,12 @@ import {
   type Vec2,
 } from '@haola/game-core';
 import { cancelPendingPush, clearCloudSave, progressScoreOf, pullSave, queuePush } from '../lib/cloud';
+import { markBuilt, rocketSlots, builtProps } from '../lib/monuments';
 
 const KEY = 'haola.save.v2';
+
+/** 满包提示节流：世界层 700ms 一次 onCollect，不节流会连环弹 toast */
+let lastFullToastAt = 0;
 
 /** 存档版本。不是 2 的存档一律丢弃，不写迁移函数（契约 §3.1） */
 export const SAVE_SCHEMA = 2;
@@ -75,6 +83,12 @@ export type SaveStateV2 = Omit<SaveState, 'scene' | 'areaId' | 'schemaVersion'> 
   world: PlacedItem[];
   /** T7 引导状态。入存档，读档续播不重放 */
   tutorial: TutorialState;
+  /**
+   * 「落地成景」记录（乐趣改版 ⑤）：合成过的纪念性物品 id。
+   * 与背包解耦——东西被用掉了，景还留着。这就是「你在这个星球留下过痕迹」。
+   * 老存档缺字段 → 归一化为 []。
+   */
+  built: string[];
 };
 
 // ───────────────────────── v1 ⇄ v2 适配（唯一的类型边界） ─────────────────────────
@@ -85,7 +99,12 @@ function toCore(save: SaveStateV2): SaveState {
 }
 
 /** v1 → v2：剥掉两个废弃字段，接上本次的地面分布与引导进度 */
-function fromCore(next: SaveState, world: PlacedItem[], tutorial: TutorialState): SaveStateV2 {
+function fromCore(
+  next: SaveState,
+  world: PlacedItem[],
+  tutorial: TutorialState,
+  built: string[] = [],
+): SaveStateV2 {
   return {
     schemaVersion: SAVE_SCHEMA,
     day: next.day,
@@ -109,6 +128,7 @@ function fromCore(next: SaveState, world: PlacedItem[], tutorial: TutorialState)
     launchFailures: next.launchFailures,
     world,
     tutorial,
+    built,
   };
 }
 
@@ -155,6 +175,7 @@ function readBranches(raw: unknown): Record<string, boolean> {
     teashop: false,
     birthday: false,
     stay: false,
+    chaos: false,
   };
   if (!raw || typeof raw !== 'object') return out;
   const b = raw as Record<string, unknown>;
@@ -255,6 +276,10 @@ function readSavedGame(): SaveStateV2 | null {
       // 归一化：老存档没有 logsFound 字段 → 空数组。
       // 只保留真实存在的日志 id，去重。
       logsFound: readLogsFound(parsed.logsFound),
+      // 归一化：老存档没有 built（落地成景记录）→ 空数组。
+      built: Array.isArray(parsed.built)
+        ? parsed.built.filter((id): id is string => typeof id === 'string')
+        : [],
     };
   } catch {
     return null;
@@ -270,6 +295,16 @@ export interface ToastData {
 }
 
 // ───────────────────────── 区域解锁 ─────────────────────────
+
+/** 扔掉一叠之后：合成槽里对这件东西的引用一并清掉 */
+function slotsWithout(
+  bag: Record<string, number>,
+  slots: [string | null, string | null],
+): [string | null, string | null] {
+  return slots.map((s) =>
+    s && (bag[s] ?? 0) <= 0 ? null : s,
+  ) as [string | null, string | null];
+}
 
 /**
  * 未解锁区域（画雾障 + 挡人）。
@@ -377,6 +412,8 @@ interface GameStore {
    * 引导期内「首次合错 / 首次被雾障弹回」各只说一次；刷新后可能重来一次，可接受。
    */
   tutorFlags: { wrong: boolean; blocked: boolean };
+  /** 世界线邀请已播过的线 id（瞬态，不入存档）。刷新后可重来一次，可接受 */
+  invitesSeen: string[];
 
   // ── 世界（不持久化，契约 §3.2）──
   /** 角色实时位置。每帧更新，**没有订阅者**，别拿它渲染 */
@@ -399,6 +436,8 @@ interface GameStore {
   collect: (uid: string) => void;
 
   craft: () => void;
+  /** 扔掉一整叠（乐趣改版 ①）：满包时腾格用。免费动作，不耗天数 */
+  drop: (id: string) => void;
   refreshWorld: () => void;
 
   toggleSlot: (id: string) => void;
@@ -500,6 +539,7 @@ export const useGame = create<GameStore>((set, get) => {
     codexOpen: false,
     ngPlusConfirmOpen: false,
     tutorFlags: { wrong: false, blocked: false },
+    invitesSeen: [],
 
     player: spawnPoint(),
     spawn: spawnPoint(),
@@ -562,6 +602,7 @@ export const useGame = create<GameStore>((set, get) => {
         codexOpen: false,
         ngPlusConfirmOpen: false,
         tutorFlags: { wrong: false, blocked: false },
+        invitesSeen: [],
         player: spawn,
         spawn,
         moveTarget: null,
@@ -635,6 +676,16 @@ export const useGame = create<GameStore>((set, get) => {
       const placed = world.find((it) => it.uid === uid);
       // 已经捡走了 / 被上一次刷新顶掉了 —— 世界层有 700ms 节流，这里静默忽略
       if (!placed) return;
+
+      // 背包容量（乐趣改版 ①）：满包拿不动新种类。东西留在地上，弹提示（节流）。
+      if (!canTake(save.bag, placed.id)) {
+        const now = Date.now();
+        if (now - lastFullToastAt > 2500) {
+          lastFullToastAt = now;
+          get().showToast('背包满了', '10 格装满了。合成掉或者扔掉一些，再捡。');
+        }
+        return;
+      }
 
       const firstTime = !save.discovered[placed.id];
       const item = getItem(placed.id);
@@ -711,20 +762,34 @@ export const useGame = create<GameStore>((set, get) => {
         const isStageClear =
           dk === 'clear1' || dk === 'clear2' || dk === 'clear3';
         dialog = isStageClear
-          ? lines(dk)
+          ? dk === 'clear3'
+            ? [
+                ...lines(dk),
+                '下一班发射窗口在 40 天前后。够你把剩下的零件攒出来——理论上。',
+              ]
+            : lines(dk)
           : [`「${output.name}」成了。${output.desc}`];
-        get().showToast(output.name, output.desc);
+        get().showToast(
+          (res.masterpiece ? '杰作 ×2 · ' : '') + output.name,
+          output.desc,
+        );
       } else {
         const hint = hintMessage(res.outcome);
         if (hint) {
           dialog = [hint];
         } else if (res.outcome.result.kind === 'recipe') {
-          dialog = [`「${output.name}」。${output.desc}`];
+          // 精确配方：先念「合成理由」（为什么这俩能变成那个），再报产物。
+          // 玩家觉得「有点道理」靠的是这一句，而不是产物描述。
+          const why = recipeWhy(a, b);
+          dialog = why
+            ? [why, `「${output.name}」。${output.desc}`]
+            : [`「${output.name}」。${output.desc}`];
         } else {
           dialog = [`意外发现「${output.name}」。${output.desc}`];
         }
         get().showToast(
-          res.outcome.result.kind === 'recipe' ? output.name : `意外：${output.name}`,
+          (res.masterpiece ? '杰作 ×2 · ' : '') +
+            (res.outcome.result.kind === 'recipe' ? output.name : `意外：${output.name}`),
           output.desc,
         );
       }
@@ -733,8 +798,20 @@ export const useGame = create<GameStore>((set, get) => {
       const wasGuiding = save.tutorial.step !== 'free';
       if (wasGuiding) dialog = [...lines('tutCraft'), ...dialog];
 
+      // 杰作演出（乐趣改版 ②）：×2 产出要有一次明确的「哇」。
+      // 台词放最前（不被阶段播报顶掉），toast 标题带杰作标。
+      if (res.masterpiece) {
+        dialog = [...lines('masterpiece'), ...dialog];
+      }
+
       // 时间由合成推进（契约 §7）：第 7 天访客改为「当天首次合成后」触发
-      let next = fromCore(res.state, save.world, advanceTutorial(save.tutorial, 'craft'));
+      let next = fromCore(
+        res.state,
+        save.world,
+        advanceTutorial(save.tutorial, 'craft'),
+        // 落地成景（乐趣改版 ⑤）：产物是纪念物 / 飞船部件 → 记入 built
+        markBuilt(save.built, output.id),
+      );
       if (next.day === 7) {
         next = {
           ...next,
@@ -746,6 +823,8 @@ export const useGame = create<GameStore>((set, get) => {
           }),
         };
         dialog = [...lines('day7'), '它扔了三样东西下来，然后就走了。我猜是清库存。'];
+      } else if (next.day === 14) {
+        dialog = [...dialog, '第 14 天。沙暴把地面重新洗了一遍牌。都翻一遍。'];
       } else if (next.day === 30) {
         dialog = [...dialog, ...lines('day30')];
       } else if (next.day === 100) {
@@ -761,6 +840,17 @@ export const useGame = create<GameStore>((set, get) => {
           const branch = BRANCHES.find((x) => x.id === newlyDone[0]!.id)!;
           dialog = [...dialog, `「${branch.name}」成了。${branchSummary(branch.id)}`];
         }
+      }
+
+      // 世界线邀请：合成让某条线的倾向值过阈值时，AI 给一句方向性提示。
+      // 不改变判定，只负责在玩家偏离主线时告诉他「这条路也通向结局」。
+      const seen = get().invitesSeen;
+      const freshInvites = activeInvites(toCore(next)).filter(
+        (l) => !seen.includes(l.id),
+      );
+      if (freshInvites.length > 0) {
+        dialog = [...dialog, ...freshInvites.map((l) => l.invite)];
+        set({ invitesSeen: [...seen, ...freshInvites.map((l) => l.id)] });
       }
 
       // 合成 → +1 天 → 重刷地面（契约 §2.4）
@@ -779,6 +869,15 @@ export const useGame = create<GameStore>((set, get) => {
       const { save, player, viewportHalf, zoom } = get();
       const world = redistribute(save, player, viewportHalf / zoom);
       commit({ ...save, world });
+    },
+
+    /** 扔掉一整叠（乐趣改版 ①）。不耗天数；built 不动——造过的东西痕迹还在 */
+    drop: (id) => {
+      const { save } = get();
+      const nextCore = coreDropItem(toCore(save), id);
+      if (!nextCore) return;
+      const next = fromCore(nextCore, save.world, save.tutorial, save.built);
+      commit(next, { slots: slotsWithout(next.bag, get().slots) });
     },
 
     toggleSlot: (id) => {
@@ -832,7 +931,7 @@ export const useGame = create<GameStore>((set, get) => {
       if (mode === 'none') return;
 
       const res = attemptLaunch(toCore(save));
-      const next = fromCore(res.state, save.world, save.tutorial);
+      const next = fromCore(res.state, save.world, save.tutorial, save.built);
       if (res.ok) {
         commit(next, { screen: 'ending', dialog: lines('launchSuccess'), dialogIndex: 0 });
       } else {
@@ -843,9 +942,12 @@ export const useGame = create<GameStore>((set, get) => {
 
     chooseEnding: (ending) => {
       const { save } = get();
-      commit(fromCore(finishGame(toCore(save), ending), save.world, save.tutorial), {
-        screen: 'ending',
-      });
+      commit(
+        fromCore(finishGame(toCore(save), ending), save.world, save.tutorial, save.built),
+        {
+          screen: 'ending',
+        },
+      );
     },
 
     advanceDialog: () => {
@@ -922,7 +1024,8 @@ export const useGame = create<GameStore>((set, get) => {
     startNewCycle: () => {
       const { save, player, viewportHalf, zoom } = get();
       const nextCore = coreStartNextCycle(toCore(save));
-      let next = fromCore(nextCore, save.world, save.tutorial);
+      // 新周目：世界进度清零，落地成景也一起清（重新降落，坠毁点重新开始）
+      let next = fromCore(nextCore, save.world, save.tutorial, []);
       const world = redistribute(next, player, viewportHalf / zoom);
       next = { ...next, world };
       commit(next, {
@@ -1092,13 +1195,15 @@ export const useGame = create<GameStore>((set, get) => {
 function branchSummary(id: string): string {
   switch (id) {
     case 'ship':
-      return '三件套齐了，什么时候起飞你说了算。';
+      return '四件套齐了，什么时候起飞你说了算。';
     case 'teashop':
       return '招牌还没干，但已经有人排队了。';
     case 'birthday':
       return '生日办完了，它很高兴。';
     case 'stay':
       return '落脚的地方有了，生计有了，熟人也有了。';
+    case 'chaos':
+      return '轮廓、声音、答案都齐了。你终于把自己合明白了。';
     default:
       return '';
   }

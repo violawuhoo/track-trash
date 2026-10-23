@@ -119,10 +119,10 @@ describe('阶段 3 三步目标链（正式内容）', () => {
     // 发放建设纪念品
     expect(state.keepsakes).toContain('ks_build');
     expect(state.keepsakes.filter((k) => k === 'ks_build')).toHaveLength(1);
-    // 三件产物都进背包
-    expect(state.bag.notice).toBe(1);
-    expect(state.bag.generator).toBe(1);
-    expect(state.bag.hourglass).toBe(1);
+    // 三件产物都进背包（杰作 roll 20% 可能 ×2，所以是 ≥1 而不是 =1）
+    expect((state.bag.notice ?? 0)).toBeGreaterThanOrEqual(1);
+    expect((state.bag.generator ?? 0)).toBeGreaterThanOrEqual(1);
+    expect((state.bag.hourglass ?? 0)).toBeGreaterThanOrEqual(1);
     // 写了一条「阶段」日志
     expect(state.log.some((l) => l.kind === '阶段')).toBe(true);
   });
@@ -287,9 +287,10 @@ describe('阶段 3 三步目标链（正式内容）', () => {
       }
     }
 
-    // 覆盖面：四条支线共 23 个候选品全部有配方且被验证过
-    // （前三条 17 个 + 第四支线 stay 的 6 个）
-    expect(branchTargets.size).toBe(23);
+    // 覆盖面：五条支线共 31 个候选品全部有配方且被验证过
+    // （飞船 13 = 动力 4 + 导航 3 + 外壳 3 + 生命维持 3；
+    //   奶茶店 4 + 生日 5 + stay 6 + 混沌线 3）
+    expect(branchTargets.size).toBe(31);
     expect(checked.length).toBeGreaterThanOrEqual(23);
   });
 

@@ -71,8 +71,14 @@ export function isMasterpieceCraft(
   return (h >>> 0) % 100 < MASTERPIECE_RATE;
 }
 
-/** 新游戏 */
-export function createInitialState(): SaveState {
+/**
+ * 新游戏。
+ *
+ * `runSeed`：本局的剧本种子（迹象系统）。默认 0 = 老档 / 无种子，
+ * 走固定剧本（无迹象）—— 保持既有测试与调用方的确定性不变。
+ * web 的 `newGame` 传随机种子；`startNextCycle` 走 core 的确定性派生。
+ */
+export function createInitialState(runSeed = 0): SaveState {
   return {
     schemaVersion: SCHEMA_VERSION,
     day: 1,
@@ -88,6 +94,10 @@ export function createInitialState(): SaveState {
     ngPlus: createNgPlus(),
     crafts: 0,
     logsFound: [],
+    runSeed,
+    // 探索动机改版：本局已触发的迹象 id。新档为空（还没有迹象可触发）；
+    // `runSeed = 0`（老档）时永远为空（没有迹象）。
+    signsFound: [],
     branches: { ship: false, teashop: false, birthday: false, stay: false, chaos: false },
     keepsakes: [],
     accidents: 0,
@@ -218,12 +228,23 @@ export function pickFromScene(
   const firstTime = !state.discovered[itemId];
   const item = getItem(itemId);
 
+  // 前任日志载体记账（B3，用户批准）。
+  // 载体是普通物品，捡到 = 拿到那段记录 —— 与 `craft()` 产出载体时的口径一致
+  // （见 craft 里约 L311 的注释）。载体不进 `AREA_POOLS`（GDD 约束 11：
+  // 保底来源数稳定不受伤），这条路径只是「万一载体出现在场景里」的记账对齐。
+  const pickedLogId = CARRIER_TO_LOG[itemId];
+  const logsFound =
+    pickedLogId && !state.logsFound.includes(pickedLogId)
+      ? [...state.logsFound, pickedLogId]
+      : state.logsFound;
+
   return {
     state: {
       ...state,
       scene,
       bag: addItem(state.bag, itemId),
       discovered: { ...state.discovered, [itemId]: true },
+      logsFound,
       log: appendLog(state.log, {
         day: state.day,
         kind: '拾取',
@@ -409,9 +430,17 @@ export function craft(
     dialogueKey = isAccident ? 'accident' : 'craft';
   }
 
-  // ── 支线检查（阶段 3） ──
-  if (next.stage === 3) {
+  // ── 支线检查（A3 B-soft：stage >= 2 即可达成，ship 仍锁 stage 3） ──
+  //
+  // 改版动机：原判定 `stage === 3` 把「探索期（阶段 2）就攒齐槽位」的玩家
+  // 一直挡到建设期走满 —— 流程被预先回答，自主性受损。
+  // B-soft 口径：非 ship 支线在阶段 2 即可达成；**ship 仍只在 stage 3 判定**
+  // （防速通主导策略：阶段 2 攒齐飞船四件套不该直接决定「回家」结局），
+  // 且 `availableEndings` 的 leave 入口同步加 stage >= 3 门（见下）。
+  if (next.stage >= 2) {
     for (const status of allBranchStatus(next.bag)) {
+      // ship 完成仍只在 stage 3 判定：阶段 2 攒齐四件套不触发、不进结局。
+      if (status.id === 'ship' && next.stage < 3) continue;
       if (status.done && !next.branches[status.id]) {
         const branch = BRANCHES.find((b) => b.id === status.id)!;
         next = {
@@ -542,7 +571,9 @@ export function endingLines(ending: EndingId): string[] {
 export function hintMessage(outcome: MixOutcome): string | null {
   if (!outcome.hint) return null;
   if (outcome.hint.laterStep) {
-    return `这个组合对应第 ${outcome.hint.laterStep.index + 1} 步。先把前面那步做完。`;
+    // A5（提示降噪）：去掉命令语气（「先把前面那步做完」），
+    // 改成两条路都摆出来的中性表述 —— 顺序由玩家自己定。
+    return `这个组合像是后面要用的东西。先做前面的也行，先造它也行。`;
   }
   if (outcome.hint.missing.length > 0) {
     return missingLine(outcome.hint.missing);
@@ -563,7 +594,9 @@ export function availableEndings(state: SaveState): EndingId[] {
   for (const b of BRANCHES) {
     if (state.branches[b.id] && b.id !== 'ship') out.push(b.ending);
   }
-  if (launchCheck(state.bag) !== 'none') out.push('leave');
+  // A3 B-soft：leave 入口与 BagDrawer 已有的 `showLaunch = stage === 3 && mode !== 'none'`
+  // 对齐 —— 阶段 2 攒齐飞船四件套不开放起飞入口（防速通主导策略）。
+  if (state.stage >= 3 && launchCheck(state.bag) !== 'none') out.push('leave');
   // GDD §2.5 拍板口径：「自由模式」= 完成迫降期（stage ≥ 2）后随时可选、且永久可选。
   // stage 1 不可选 —— 玩家还没学会合成、还没理解标签并集就能结束游戏，
   // 等于把核心机制变成可跳过项。

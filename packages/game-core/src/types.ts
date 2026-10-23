@@ -222,6 +222,34 @@ export interface SaveState {
    * 归一化：老存档缺字段 → 空数组。
    */
   logsFound: string[];
+  /**
+   * 本局的剧本种子（探索动机改版 · 迹象系统）。
+   *
+   * 驱动「远处的迹象」事件抽取（`signs.ts` 的 `drawSigns`）：
+   * 每局抽 3 条日期不重叠的迹象，奖励全复用现有 base 物品。
+   * 新档由 web 端随机生成；`startNextCycle` 由 (cycle, endings) **确定性派生**
+   * （game-core 无 IO 铁律：不许 Math.random）。
+   *
+   * **不 bump `schemaVersion`**：按 T7 `tutorial` / A1a `buildDone` / A2 `ngPlus` /
+   * C1 `crafts`+`logsFound` 先例，读档时归一化（老存档缺字段 → 0）。
+   *
+   * `0` = 老档 / 无种子 → 走固定剧本（`drawSigns(0)` 返回空，无迹象）。
+   */
+  runSeed: number;
+  /**
+   * 本局已触发过的「远处的迹象」id（探索动机改版 · 防迹象农场）。
+   *
+   * 没有这个字段时，同一条迹象在窗口期里**每天都能再点一次**，
+   * 奖励（crystal / fuel 等 base 物品）会被反复农场 —— 伤方差设计的初衷。
+   * 触发一次就记上，世界层按它过滤（已触发的不再显示），
+   * meteor 那条无奖励，一并按同口径处理。
+   *
+   * **不 bump `schemaVersion`**：按 T7 `tutorial` / A1a `buildDone` / A2 `ngPlus` /
+   * C1 `crafts`+`logsFound`+`runSeed` 先例，读档时归一化（老存档缺字段 → 空数组）。
+   *
+   * 单周目字段：跟 `logsFound` 同口径，`startNextCycle` 清零（新剧本新迹象）。
+   */
+  signsFound: string[];
   branches: Record<BranchId, boolean>;
   keepsakes: string[];
   accidents: number;

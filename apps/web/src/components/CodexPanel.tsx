@@ -37,6 +37,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   ENDINGS,
+  ITEMS,
   LOGS,
   type EndingId,
   type LogDoc,
@@ -52,6 +53,11 @@ const ENDING_ORDER: readonly EndingId[] = [
   'chaos',
   'free',
 ];
+
+/** 全部 base 物品 id（「没见过的东西」的分母）。合成产物不算——那些不是「东西」是「成果」 */
+const BASE_ITEM_IDS: readonly string[] = ITEMS.filter((i) => i.kind === 'base').map(
+  (i) => i.id,
+);
 
 /** 日志条目的展示状态 */
 type LogState = 'read' | 'carried' | 'unknown';
@@ -77,6 +83,10 @@ export function CodexPanel() {
   // 主菜单时 `save` 是空档案，直接读它会把「拿到载体但还没读」的篇目
   // 误判成「完全没碰到」。镜像在 `commit` 时同步，主菜单看到的是上一次存档的情况。
   const logsFound = useGame((s) => s.archiveLogsFound);
+  // 「见过的东西」（探索动机改版）：同样是镜像口径 —— `discovered` 随周目清零，
+  // 跨周目的「这辈子见过」没有 core 字段承载（本批不做 schema 变更），
+  // 镜像保证主菜单看到的是上一次存档的真实情况。
+  const discovered = useGame((s) => s.archiveDiscovered);
 
   /** 展开中的日志 id。null = 都没展开 */
   const [openId, setOpenId] = useState<string | null>(null);
@@ -118,6 +128,19 @@ export function CodexPanel() {
     [readLogs, logsFound],
   );
 
+  /**
+   * 「没见过的东西」（探索动机改版）：分母 = 全部 base 物品（33），
+   * 分子 = `discovered` 里标记见过的。没见过的渲染成 ??? 剪影格子 ——
+   * 「这星球上还有你没翻过的东西」是探索动机最直白的注脚。
+   *
+   * `discovered` 只记**捡到过**（collect / 迹象奖励都会写），
+   * 所以合成产物不算「见过的东西」——它们是成果，不是收藏。
+   */
+  const { seenCount, unseenCount } = useMemo(() => {
+    const seen = BASE_ITEM_IDS.filter((id) => discovered[id] === true).length;
+    return { seenCount: seen, unseenCount: BASE_ITEM_IDS.length - seen };
+  }, [discovered]);
+
   if (!codexOpen) return null;
 
   const unlockedEndings = endingCells.filter((c) => c.unlocked).length;
@@ -135,7 +158,8 @@ export function CodexPanel() {
         <div className="codex__head">
           <span className="codex__title">图鉴</span>
           <span className="codex__meta">
-            结局 {unlockedEndings} / {ENDING_ORDER.length} · 日志 {readCount} / {LOGS.length}
+            结局 {unlockedEndings} / {ENDING_ORDER.length} · 日志 {readCount} / {LOGS.length} · 东西{' '}
+            {seenCount} / {BASE_ITEM_IDS.length}
           </span>
           <button
             type="button"
@@ -219,6 +243,26 @@ export function CodexPanel() {
                 );
               })}
             </div>
+          </section>
+          {/* ── 没见过的东西（探索动机改版）── */}
+          <section className="codex__section">
+            <h2 className="codex__sectiontitle">没见过的东西</h2>
+            {unseenCount === 0 ? (
+              <p className="codex__allseen">
+                {BASE_ITEM_IDS.length} 件都见过了。这颗星球对你没有秘密了。
+              </p>
+            ) : (
+              <div className="codex__unknowns">
+                {Array.from({ length: unseenCount }, (_, i) => (
+                  <div
+                    key={i}
+                    className="codex__unknown"
+                    role="img"
+                    aria-label="还没见过的东西"
+                  />
+                ))}
+              </div>
+            )}
           </section>
         </div>
       </div>

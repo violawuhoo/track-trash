@@ -11,6 +11,7 @@
  * | 本周目状态 | 背包 / 阶段 / 天数 / 世界日志…… | `SaveState` 其余字段 |
  * | 跨周目档案 | 已解锁结局 / 已读日志 / 走过的支线 / 周目数 | `SaveState.ngPlus` |
  * | 单周目内已获得 | 载体记账 | `SaveState.logsFound` |
+ * | 单周目内已触发 | 撞见过的迹象（防农场） | `SaveState.signsFound` |
  *
  * `logsFound`（C1，单周目）与 `ngPlus.readLogs`（跨周目）是**两个不同的东西**：
  * 前者是「本周目合出过哪些载体」，后者是「这辈子读过哪些篇目」。
@@ -314,6 +315,21 @@ export const NEXT_CYCLE_RESET: readonly NextCycleBullet[] = Object.freeze([
     note: '载体是要用掉的，不带过去',
   }),
   Object.freeze({
+    // 探索动机改版：剧本种子每周目重生成（由 cycle + endings 确定性派生），
+    // 所以「这一局的剧本」属于重置项 —— 新周目的迹象事件与上周目不同。
+    fields: Object.freeze(['runSeed'] as const),
+    text: '这一局的剧本',
+    note: '新的日程，新的迹象',
+  }),
+  Object.freeze({
+    // 探索动机改版（防迹象农场补丁）：本局已触发过的迹象 id 随剧本一起作废。
+    // 不清的话，新周目里同一条迹象会被「已触发」直接挡掉 —— 奖励少一份。
+    // 与 runSeed 并排：两条都源自「剧本换了」，后果同一句。
+    fields: Object.freeze(['signsFound'] as const),
+    text: '这一局撞见的迹象',
+    note: '新的日程，新的迹象',
+  }),
+  Object.freeze({
     fields: Object.freeze(['accidents', 'log'] as const),
     text: '意外次数与这一周的世界日志',
   }),
@@ -329,6 +345,30 @@ export const NEXT_CYCLE_RESET: readonly NextCycleBullet[] = Object.freeze([
 ]);
 
 /**
+ * 周目种子派生（探索动机改版 · 迹象系统）。
+ *
+ * 纯函数确定性派生：同一个 (cycle, endings) 永远得到同一个种子。
+ * **不许引 `Math.random`** —— game-core 无 IO 铁律（同 `isMasterpieceCraft`
+ * 的确定性哈希先例）。
+ *
+ * 输入口径：`endings` 排序后入键 —— 集合无序，排序保证「同一批结局」
+ * 不管以什么顺序抵达，都派生同一个种子。
+ *
+ * 输出保证 **非 0**：`0` 是「老档 / 无种子」的保留值（老档无迹象），
+ * 派生结果不允许占用它；同时落在 `[1, 0x7fffffff]`，与 web `newGame` 的
+ * 随机种子同量级。
+ */
+export function deriveRunSeed(cycle: number, endings: readonly EndingId[]): number {
+  const key = `${cycle}|${[...endings].sort().join(',')}`;
+  let h = 2166136261;
+  for (let i = 0; i < key.length; i++) {
+    h ^= key.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return (h >>> 1) || 1;
+}
+
+/**
  * 开新周目（二周目）。
  *
  * GDD §7.1：
@@ -340,6 +380,10 @@ export const NEXT_CYCLE_RESET: readonly NextCycleBullet[] = Object.freeze([
  *   另外 C1 落的两项也重置：`crafts`(=0)（解锁条件用的合成计数）、
  *   `logsFound`(=[])（单周目载体记账；跨周目的「已读」在 `ngPlus.readLogs`）。
  *   `buildDone`(=false)（阶段 3 三步走满是世界进度，重做）。
+ *   `runSeed`（探索动机改版）：由 (cycle, endings) 确定性派生 ——
+ *   新周目的「远处的迹象」与上周目不同，「每局内容相同」被治掉。
+ *   `signsFound`(=[])（探索动机改版 · 防迹象农场）：本局触发过的迹象 id
+ *   随旧剧本一起作废 —— 不清的话新周目里同一条迹象会被「已触发」挡掉。
  *
  * 「世界进度全部清零，只留下『你知道的东西』和『你拿到过的东西』」。
  *
@@ -364,6 +408,11 @@ export function startNextCycle(state: SaveState): SaveState {
     buildDone: false,
     crafts: 0,
     logsFound: [],
+    // 新剧本：由**新**周目数 + 已解锁结局确定性派生（上一周目的种子不参与，
+    // 所以即使两周目结局集相同，cycle 不同 → 种子不同 → 迹象不同）。
+    runSeed: deriveRunSeed(np.cycle, np.endings),
+    // 防迹象农场：旧剧本里触发过的迹象 id 全部作废（新剧本的迹象要能重新触发）。
+    signsFound: [],
     branches: { ship: false, teashop: false, birthday: false, stay: false, chaos: false },
     accidents: 0,
     log: [

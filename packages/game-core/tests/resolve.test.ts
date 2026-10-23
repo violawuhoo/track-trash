@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { STAGES, resolveMix } from '../src/index';
+import { STAGES, hintMessage, resolveMix } from '../src/index';
 import type { Progress, Tag } from '../src/index';
 
 const at = (stage: 1 | 2 | 3 | 4, stepIndex: number): Progress => ({ stage, stepIndex });
@@ -131,10 +131,14 @@ describe('合成判定优先级', () => {
     expect(result.output).toBe('unclear');
   });
 
-  it('提前满足后面步骤时给出「先做前面」的提示', () => {
-    const { result, hint } = resolveMix('manual', 'battery', at(1, 0));
-    expect(result.kind).toBe('accident'); // 电池带风险
-    expect(hint?.laterStep?.index).toBe(2);
+  it('提前满足后面步骤时给出中性双路提示（A5 提示降噪定稿）', () => {
+    const outcome = resolveMix('manual', 'battery', at(1, 0));
+    expect(outcome.result.kind).toBe('accident'); // 电池带风险
+    expect(outcome.hint?.laterStep?.index).toBe(2);
+    // 定稿文案：不再命令「先把前面那步做完」，两条路都摆出来、顺序交给玩家
+    expect(hintMessage(outcome)).toBe(
+      '这个组合像是后面要用的东西。先做前面的也行，先造它也行。',
+    );
   });
 
   it('同一种物品可以自合', () => {

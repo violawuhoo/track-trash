@@ -25,6 +25,7 @@ import {
   createInitialState,
   createNgPlus,
   continueAfterEnding,
+  deriveRunSeed,
   getItem,
   ngPlusUnlocked,
   normalizeNgPlus,
@@ -128,6 +129,10 @@ describe('B. startNextCycle（保留 / 重置清单，GDD §7.1）', () => {
       keepsakes: ['ks_ship', 'ks_stay'],
       branches: { ship: true, teashop: false, birthday: true, stay: true, chaos: false },
       logsFound: ['L1', 'L3'],
+      // ⚠️ 探索动机改版（防迹象农场）：必须填成**非空**。
+      // B5 用「前后是否变化」判断字段属于重置还是保留 —— before 是 [] 的话
+      // 前后相同会被误判成「保留」，而清单标的是重置 → 分类断言红。
+      signsFound: ['sign_light', 'sign_smoke'],
       accidents: 5,
       ending: 'stay',
       launchAttempts: 2,
@@ -167,6 +172,8 @@ describe('B. startNextCycle（保留 / 重置清单，GDD §7.1）', () => {
     expect(next.buildDone).toBe(false);
     expect(next.crafts).toBe(0);
     expect(next.logsFound).toEqual([]);
+    // 探索动机改版：旧剧本里撞见过的迹象随剧本作废（防农场补丁）
+    expect(next.signsFound).toEqual([]);
     expect(next.bag).toEqual({});
     expect(next.discovered).toEqual({});
     expect(next.branches).toEqual({
@@ -259,6 +266,9 @@ describe('B. startNextCycle（保留 / 重置清单，GDD §7.1）', () => {
    * B7（2026-10-22 文案定稿）：清单文案必须**逐字等于定稿**。
    *
    * 真源：`docs/design/CONTENT-v3-NGPLUS-UI-COPY.md` §1（保留 K1–K5）/ §2（重置 R1–R8）。
+   * 「这一局的剧本」与「这一局撞见的迹象」两条是**探索动机改版批次**的用户拍板项
+   * （runSeed 每周目重派生 + signsFound 防迹象农场），插在 R5（记录载体）之后、
+   * 并排摆放 —— 文案同属定稿级，改动走同一流程。
    * 定稿里 `【N】` 是待插入的计数占位符，`note` 是「——」之后的后果说明。
    *
    * 为什么要逐字断言：这一页的**全部意义**就是「把你会失去什么摆出来」。
@@ -283,6 +293,8 @@ describe('B. startNextCycle（保留 / 重置清单，GDD §7.1）', () => {
       ['已完成的支线', '但还是得重新做一遍'],
       ['累计合成次数', '上周目没读完的那几篇记录，要重新攒次数才能读'],
       ['这一周拿到的记录载体', '载体是要用掉的，不带过去'],
+      ['这一局的剧本', '新的日程，新的迹象'],
+      ['这一局撞见的迹象', '新的日程，新的迹象'],
       ['意外次数与这一周的世界日志', null],
       ['本周目的结局', '结局本身已经记在「已解锁的结局」里了'],
       ['起飞尝试与失败的次数', null],
@@ -331,6 +343,74 @@ describe('B. startNextCycle（保留 / 重置清单，GDD §7.1）', () => {
     expect(resetText).toContain('合成次数');
     expect(resetText).toContain('记录载体');
     expect(keptText.length).toBeGreaterThan(0);
+  });
+
+  /**
+   * B9–B11（探索动机改版）：`runSeed` 的周目派生。
+   *
+   * 守三件事：
+   * 1. **确定性**：同 (cycle, endings) 永远同种子；`endings` 顺序无关
+   *    （集合无序，排序入键）——否则同一批结局换个抵达顺序就换剧本，
+   *    玩家会以为迹象在乱跑。
+   * 2. **非 0**：0 是「老档 / 无种子 → 无迹象」的保留值，派生不许占用。
+   * 3. **每周目不同**：cycle 进键 → 即使两周目结局集相同，剧本也不同
+   *    （「每局内容相同」要治的是这个）。
+   */
+  it('B9 deriveRunSeed：确定性 + endings 顺序无关 + 非 0', () => {
+    expect(deriveRunSeed(2, ['leave', 'stay'])).toBe(deriveRunSeed(2, ['leave', 'stay']));
+    expect(deriveRunSeed(2, ['leave', 'stay'])).toBe(deriveRunSeed(2, ['stay', 'leave']));
+    expect(deriveRunSeed(1, [])).toBeGreaterThan(0);
+    for (const cycle of [1, 2, 3, 7, 42]) {
+      for (const endings of [[], ['leave'], ['leave', 'stay'], ['stay', 'chaos', 'free']] as const) {
+        const seed = deriveRunSeed(cycle, endings);
+        expect(seed, `cycle ${cycle} endings ${endings.join(',')}`).toBeGreaterThan(0);
+        expect(seed).toBeLessThanOrEqual(0x7fffffff);
+      }
+    }
+  });
+
+  it('B10 不同周目 → 不同种子（即使结局集相同）', () => {
+    const a = deriveRunSeed(2, ['leave', 'stay']);
+    const b = deriveRunSeed(3, ['leave', 'stay']);
+    expect(a).not.toBe(b);
+  });
+
+  it('B11 startNextCycle 落的 runSeed = deriveRunSeed(新 cycle, endings)；一周目初始为 0', () => {
+    const before = playedState();
+    const after = startNextCycle(before);
+    expect(after.runSeed).toBe(deriveRunSeed(2, before.ngPlus.endings));
+    expect(after.runSeed).toBeGreaterThan(0);
+    // 老档 / 新档归一化面：createInitialState 的 runSeed = 0（无迹象，固定剧本）
+    expect(createInitialState().runSeed).toBe(0);
+    // startNextCycle 不吃上一周目的种子：即使输入种子非 0，输出只由 (cycle, endings) 决定
+    const withSeed = { ...before, runSeed: 12345 };
+    expect(startNextCycle(withSeed).runSeed).toBe(after.runSeed);
+  });
+
+  /**
+   * B12（探索动机改版 · 防迹象农场补丁）：`signsFound` 的周目重置。
+   *
+   * 守三件事：
+   * 1. **新档为空**：还没有迹象可触发（老档 / runSeed=0 时永远为空）。
+   * 2. **开新周目清零**：不清的话，新剧本里同一条迹象会被「已触发」直接挡掉，
+   *    玩家这一局少一份奖励 —— 而剧本已经换了，「撞见过」本就不作数。
+   * 3. **守恒清单有点名**（B5 机器守着）：清单漏列 → B5 红；这里再钉一次文案，
+   *    防止有人把两条并排的「新的日程，新的迹象」误并成一条。
+   */
+  it('B12 signsFound：新档为空 + startNextCycle 清零 + 清单并排点名', () => {
+    expect(createInitialState().signsFound).toEqual([]);
+    const before = playedState();
+    expect(before.signsFound.length).toBeGreaterThan(0);
+    expect(startNextCycle(before).signsFound).toEqual([]);
+
+    const seedBullet = NEXT_CYCLE_RESET.find((b) => b.fields.includes('runSeed'))!;
+    const foundBullet = NEXT_CYCLE_RESET.find((b) => b.fields.includes('signsFound'))!;
+    // 两条必须是独立的两行（后果相同但字段不同，备查各指各的）
+    expect(seedBullet.text).not.toBe(foundBullet.text);
+    expect(foundBullet.fields).toEqual(['signsFound']);
+    // 并排：signsFound 紧跟在 runSeed 后面
+    const idxSeed = NEXT_CYCLE_RESET.indexOf(seedBullet);
+    expect(NEXT_CYCLE_RESET[idxSeed + 1]).toBe(foundBullet);
   });
 });
 

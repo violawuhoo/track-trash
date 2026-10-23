@@ -88,6 +88,7 @@ export {
   NEXT_CYCLE_RESET,
   continueAfterEnding,
   createNgPlus,
+  deriveRunSeed,
   isBranchId,
   isEndingId,
   ngPlusUnlocked,
@@ -113,6 +114,16 @@ export {
   type LogDoc,
   type LogProgress,
 } from './logs';
+export {
+  SIGNS,
+  SIGNS_PER_RUN,
+  drawSigns,
+  layoutSigns,
+  signsForDay,
+  type SignDef,
+  type SignKind,
+  type SignSpot,
+} from './signs';
 export {
   DIALOGUE,
   ENDING_LINES,

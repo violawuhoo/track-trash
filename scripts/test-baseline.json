@@ -1,12 +1,12 @@
 {
   "packages/game-core": {
-    "files": 12,
-    "tests": 176,
+    "files": 13,
+    "tests": 202,
     "note": "packages/game-core/tests/*.test.ts 的文件数与用例数基线。新增用例后脚本会自动更新并提示提交；用例数减少则守恒断言报错（需人工确认后更新本文件）。"
   },
   "apps/api": {
     "files": 2,
-    "tests": 25,
+    "tests": 27,
     "note": "apps/api/tests/*.test.ts 的文件数与用例数基线。同上。"
   }
 }

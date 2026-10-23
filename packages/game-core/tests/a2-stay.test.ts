@@ -1,12 +1,14 @@
 /**
  * A2 批次：第四支线 `stay` + 新结局 + 自由模式口径修正。
  *
- * 覆盖 5 组断言：
+ * 覆盖 6 组断言：
  * - ⑨ stay 支线定义与 GDD §3.1 一致（三槽位、具体物品 id 判定、纪念品、结局）
  * - ⑩ stay 完成判定：三个槽位各齐一件即达成；发 ks_stay；非 ship 支线完成即进结局
  * - ⑪ free 口径：stage ≥ 2 才可选；stage 1 不可选；stay 完成后 free 仍可选
  * - ⑫ ngPlus 字段：新档 false、字段进类型、老档缺失时归一化由 web 端负责
  * - ⑬ ENDINGS.stay / ENDING_LINES.stay 与 GDD §3.3 一致
+ * - ⑭–⑯ A3 B-soft（探索动机改版）：非 ship 支线 stage ≥ 2 可达成；
+ *   ship 仍锁 stage 3；leave 入口 stage ≥ 3 门
  */
 import { describe, expect, it } from 'vitest';
 import {
@@ -21,7 +23,13 @@ import {
 } from '../src/index';
 import type { SaveState } from '../src/index';
 
-/** 阶段 3 的存档（stage 3 才能触发支线检查） */
+/**
+ * 阶段 3 的存档。
+ *
+ * ⚠️ A3 改版前「stage 3 才能触发支线检查」；B-soft 后非 ship 支线
+ * **stage ≥ 2** 即可达成（ship 仍锁 stage 3，见文末「A3 B-soft」组）。
+ * 这里沿用 stage 3 是给既有用例一个稳定的达成环境，不是口径本身。
+ */
 function stage3State(bag: Record<string, number> = {}): SaveState {
   return { ...createInitialState(), stage: 3, stepIndex: 0, bag: { ...bag } };
 }
@@ -277,5 +285,121 @@ describe('P0 · 支线完成时 ending 落盘', () => {
     expect(viaCraft.kind).toBe('结局');
     expect(viaCraft.kind).toBe(viaFinish.kind);
     expect(viaCraft.text).toBe(viaFinish.text);
+  });
+});
+
+// ───────────────────── A3 B-soft：支线达成时机（探索动机改版） ─────────────────────
+
+/**
+ * 改版前口径：支线完成检查 `stage === 3` 才跑 —— 探索期（阶段 2）就攒齐
+ * 槽位的玩家被一直挡到建设期走满，「流程被预先回答」。
+ *
+ * B-soft 拍板口径（用户批准）：
+ * - **非 ship 支线**：`stage >= 2` 即可达成（探索期攒齐就算数）；
+ * - **ship 仍锁 stage 3**：阶段 2 攒齐飞船四件套不触发、不进结局 ——
+ *   防速通主导策略（探索期速攒四件套直接决定「回家」）；
+ * - `availableEndings` 的 **leave 入口**同步加 `stage >= 3` 门。
+ *
+ * 阶段目标截胡注意：阶段 2 每步有标签目标（s2-1 实体+实体 / s2-2 金属+实体 /
+ * s2-3 风险+实体），当前步位会优先吞掉覆盖它的合成。所以每条用例都挑了
+ * 「标签不覆盖当前步 requires」的材料对，确保走的是精确配方。
+ */
+describe('A3 B-soft · 支线达成时机与 leave 入口门', () => {
+  /** 阶段 2 指定步位的存档 */
+  function stage2State(bag: Record<string, number> = {}, stepIndex = 0): SaveState {
+    return { ...createInitialState(), stage: 2, stepIndex, bag: { ...bag } };
+  }
+
+  it('⑭ stay（非 ship）在阶段 2 即可达成：awkward + mirror → neighbor', () => {
+    // s2-1 要「实体+实体」；awkward(抽象) + mirror(外星/抽象) 不覆盖 → 精确配方
+    const state = stage2State({ staykey: 1, toolstand: 1, awkward: 1, mirror: 1 });
+    expect(state.stage).toBe(2);
+    const res = craft(state, 'awkward', 'mirror');
+    expect(res.ok).toBe(true);
+    if (!res.ok) throw new Error('unreachable');
+    expect(res.state.bag.neighbor).toBe(1);
+    expect(res.state.stage).toBe(2); // 配方合成不推进阶段
+    expect(res.state.branches.stay).toBe(true);
+    expect(res.state.ending).toBe('stay');
+  });
+
+  it('⑭b teashop / birthday 同样在阶段 2 可达成（换步位避开阶段目标）', () => {
+    // teashop：awkward(抽象) + sock(实体) 在 s2-2（金属+实体）不被截胡
+    const tea = craft(
+      stage2State({ shopfront: 1, menu: 1, awkward: 1, sock: 1 }, 1),
+      'awkward',
+      'sock',
+    );
+    expect(tea.ok).toBe(true);
+    if (!tea.ok) throw new Error('unreachable');
+    expect(tea.state.bag.fakecustomer).toBe(1);
+    expect(tea.state.branches.teashop).toBe(true);
+    expect(tea.state.ending).toBe('teashop');
+
+    // birthday：mood(抽象) + tape(实体/粘) 在 s2-3（风险+实体）不被截胡
+    const birth = craft(
+      stage2State({ birthproof: 1, cakerepl: 1, mood: 1, tape: 1 }, 2),
+      'mood',
+      'tape',
+    );
+    expect(birth.ok).toBe(true);
+    if (!birth.ok) throw new Error('unreachable');
+    expect(birth.state.bag.clapper).toBe(1);
+    expect(birth.state.branches.birthday).toBe(true);
+    expect(birth.state.ending).toBe('birthday');
+  });
+
+  it('⑮ 护栏：阶段 2 攒齐飞船四件套不触发 ship、不出 leave 入口', () => {
+    const state = stage2State({
+      optimistic: 1,
+      joystick: 1,
+      doorthing: 1,
+      ration: 1,
+      awkward: 1,
+      mirror: 1,
+    });
+    const res = craft(state, 'awkward', 'mirror'); // → neighbor，只为触发支线检查
+    expect(res.ok).toBe(true);
+    if (!res.ok) throw new Error('unreachable');
+    // 四件套在包里，但阶段 2 不判定 ship
+    expect(res.state.branches.ship).toBe(false);
+    expect(res.state.ending).toBeNull();
+    expect(availableEndings(res.state)).not.toContain('leave');
+    expect(availableEndings(res.state)).toContain('free'); // stage ≥ 2 自由模式照常
+  });
+
+  it('⑮b 对照组：ship 在阶段 3 判定（四件套 + 阶段 3 → 达成）', () => {
+    const state: SaveState = {
+      ...createInitialState(),
+      stage: 3,
+      stepIndex: 3,
+      buildDone: true,
+      bag: {
+        optimistic: 1,
+        joystick: 1,
+        doorthing: 1,
+        ration: 1,
+        awkward: 1,
+        mirror: 1,
+      },
+    };
+    const res = craft(state, 'awkward', 'mirror');
+    expect(res.ok).toBe(true);
+    if (!res.ok) throw new Error('unreachable');
+    expect(res.state.branches.ship).toBe(true);
+  });
+
+  it('⑯ leave 入口门：stage 2 全飞船不给、stage 3 空飞船不给、stage 3 有件才给', () => {
+    const shipBag = { optimistic: 1, joystick: 1, doorthing: 1, ration: 1 };
+    // 阶段 2 + 四件套：没有 leave（防速通主导策略）
+    expect(
+      availableEndings({ ...createInitialState(), stage: 2, bag: shipBag }),
+    ).not.toContain('leave');
+    // 阶段 3 + 空飞船：没有 leave
+    expect(availableEndings({ ...createInitialState(), stage: 3 })).not.toContain('leave');
+    // 阶段 3 + 一件飞船部件：leave 出现（launchCheck = forced）
+    expect(
+      availableEndings({ ...createInitialState(), stage: 3, bag: { joystick: 1 } }),
+    ).toContain('leave');
   });
 });

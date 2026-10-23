@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import {
   BAG_CAP,
   MASTERPIECE_RATE,
-  addItem,
   bagSlots,
   canTake,
   craft,

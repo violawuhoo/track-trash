@@ -1,13 +1,24 @@
 /**
  * 结局页。
  *
- * ## 三个出口（C2 批次 · GDD §7.2）
+ * ## 四个出口（C2 批次 · GDD §7.2；R3 反悔出口 · 探索动机改版）
  *
  * | 出口 | 可见条件 | 行为 |
  * |---|---|---|
  * | 「开始二周目」 | `ngPlusUnlocked` = `cycle >= 1 && endings.length >= 1` | 打开确认页 → 写 `cycle += 1` → 全新周目 state → 播 `DIALOGUE.ngplus` |
  * | 「留在这里继续」 | 仅 stay / free 结局 | **不清档**，回自由模式（清掉 `ending`，保留 `keepsakes` / `ngPlus` / `logsFound` / `branches`） |
+ * | 「再逛逛，先不收摊」 | 总是（R3 反悔出口） | 同「留在这里继续」的行为，但**任何结局**都有 —— 玩家看完结局页反悔了，能回星球接着过 |
  * | 「再来一次」 | 总是 | `newGame` —— 重开**当前周目**（世界清零），但**保留跨周目档案**（`ngPlus` / `keepsakes`） |
+ *
+ * ## ⚠️ R3 为什么值得单开一个出口
+ *
+ * 改版前结局页对 leave / teashop / birthday / chaos 是**单行道**：
+ * 读完台词只有「二周目 / 再来一次 / 回到开始页」——三个都是「这一局结束了」。
+ * 但结局是**玩家自己走到的**，不是失败；看完想回星球上再逛逛
+ * （把没捡的东西捡捡、没触发的迹象触发掉）是正当需求。
+ * 「再逛逛」与「留在这里继续」行为相同（core 只清 `ending`），
+ * 分开命名是为了让两个入口的意图可读：一个是 stay/free 的既定出口，
+ * 一个是**任何结局**的反悔出口。回星球后 HUD 有「结局」chip 能再回来。
  *
  * ## ⚠️「留在这里继续」为什么不能用 `resetAll`
  *
@@ -52,6 +63,8 @@ export function EndingScreen() {
   const backToStart = useGame((s) => s.backToStart);
   const openNgPlusConfirm = useGame((s) => s.openNgPlusConfirm);
   const continueAfterEnding = useGame((s) => s.continueAfterEnding);
+  // R3 反悔出口：「再逛逛，先不收摊」——任何结局都能回星球接着过
+  const dismissEnding = useGame((s) => s.dismissEnding);
   const toggleCodex = useGame((s) => s.toggleCodex);
 
   if (!ending) {
@@ -111,6 +124,12 @@ export function EndingScreen() {
         <span>纪念品 {keepsakeCount}</span>
       </div>
 
+      {/* R3 确认文案：反悔出口的前提是「结局没白打」——
+          明确告诉玩家结局已记档、并且随时能回来，反悔才没有心理成本。 */}
+      <p className="ending__regret">
+        结局已经记进图鉴了。回到星球上接着过，哪天想收摊，HUD 上有个「结局」入口。
+      </p>
+
       <div
         style={{
           display: 'flex',
@@ -129,6 +148,11 @@ export function EndingScreen() {
             留在这里继续
           </button>
         )}
+        {/* R3 反悔出口：任何结局都有。行为同「留在这里继续」，
+            但命名与位置都独立 —— 它是「反悔」，不是既定路线。 */}
+        <button className="btn btn--block" onClick={dismissEnding}>
+          再逛逛，先不收摊
+        </button>
         {canStartNgPlus && (
           <button className="btn btn--block" onClick={openNgPlusConfirm}>
             {/* 一周目时写「开始二周目」（GDD §7.2 的原措辞）；

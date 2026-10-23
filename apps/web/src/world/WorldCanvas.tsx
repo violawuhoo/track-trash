@@ -72,6 +72,8 @@ import { SPACE } from './assets/palette';
 import type { PlayerDir } from './assets/player';
 import { WORLD_STATS } from './diagnostics';
 import { createMonumentsLayer, type MonumentView } from './monuments';
+import { createSignsLayer, type SignView } from './signs';
+import { SIGN_HOTZONES, signHit } from '../lib/signs';
 
 export interface WorldCanvasProps {
   /** 只用于样式定位。**必须给这个元素一个确定的尺寸**（世界层不猜布局） */
@@ -99,6 +101,14 @@ export interface WorldCanvasProps {
    * 只在合成后变化；世界层靠内容比较决定是否重建。
    */
   monuments?: MonumentView;
+  /**
+   * 「远处的迹象」（探索动机改版）：当周窗口内的迹象（摆放点 + 形）。
+   * 已触发过的迹象由 GameScreen 过滤掉（防农场口径：不再显示）。
+   * 世界层按内容 key 同步，点击命中走 `onTriggerSign`。
+   */
+  signs?: readonly SignView[];
+  /** 点中一处迹象（物品判定之后的热区命中）。接到 `store.triggerSign` */
+  onTriggerSign?: (signId: string) => void;
 }
 
 // ───────────────────────── 手感常量 ─────────────────────────
@@ -249,6 +259,12 @@ function mountRuntime(app: Application, host: HTMLDivElement, propsRef: PropsRef
   layers.layers.actors.addChildAt(monuments.root, 0);
   let lastMonumentsKey = '';
 
+  // ── 迹象（远处的光 / 烟 / 假人）：同垫底层，排在纪念物之下 ──
+  const signs = createSignsLayer();
+  layers.layers.actors.addChildAt(signs.root, 0);
+  let lastSignsKey = '';
+  let signViews: readonly SignView[] = first.signs ?? [];
+
   // ── items ──
   retainTextures();
   prefetchPlayer();
@@ -364,6 +380,23 @@ function mountRuntime(app: Application, host: HTMLDivElement, propsRef: PropsRef
       }
       monuments.tick();
     }
+
+    // 1.6) 迹象同步：内容 key 变了才重建（跨天换批，低频）。
+    // tick 每帧都跑 —— 灯火三闪与烟墨摆动是持续动效，停了就读成静止贴纸。
+    if (props.signs) {
+      const key = props.signs.map((s) => `${s.id}:${s.kind}`).join('|');
+      if (key !== lastSignsKey) {
+        lastSignsKey = key;
+        signViews = props.signs;
+        signs.sync(props.signs);
+      }
+    } else if (signViews.length > 0) {
+      // props 被撤掉（正常不该发生，防御）：清掉层，别留幽灵迹象
+      lastSignsKey = '';
+      signViews = [];
+      signs.sync([]);
+    }
+    signs.tick(reduced);
 
     // 2) 外部要求跳转（换档 / 回坠毁点）。自己的回声不算
     if (props.player !== seenPlayerProp) {
@@ -499,6 +532,16 @@ function mountRuntime(app: Application, host: HTMLDivElement, propsRef: PropsRef
       if (picked) {
         propsRef.current.onCollect?.(picked.uid);
         return;
+      }
+
+      // 迹象热区判定（物品之后、移动之前）：点中「远处的东西」= 触发，不移动。
+      // 热区按视觉包围盒中心建（lib/signs.ts），与贴地绘制锚点解耦 ——
+      // 图形长在空中，玩家点的也是空中那团，不是地面上的一个点。
+      for (const s of signViews) {
+        if (signHit(SIGN_HOTZONES[s.kind], worldPoint.x - s.x, worldPoint.y - s.y)) {
+          propsRef.current.onTriggerSign?.(s.id);
+          return;
+        }
       }
 
       const clamped = clampToWalkable(worldPoint);

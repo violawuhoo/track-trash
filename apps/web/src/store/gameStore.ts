@@ -27,6 +27,7 @@ import { create } from 'zustand';
 import {
   BRANCHES,
   LOG_BY_ID,
+  SIGNS,
   addItem,
   allBranchStatus,
   appendLog,
@@ -48,6 +49,7 @@ import {
   recipeWhy,
   recordReadLog,
   sectorCenter,
+  signsForDay,
   startNextCycle as coreStartNextCycle,
   type AreaId,
   type EndingId,
@@ -92,6 +94,9 @@ export type SaveStateV2 = Omit<SaveState, 'scene' | 'areaId' | 'schemaVersion'> 
    * 老存档缺字段 → 归一化为 []。
    */
   built: string[];
+  // 「本局已触发的迹象」`signsFound` 由 core `SaveState` 继承（Omit 不带掉它）——
+  // 探索动机改版防迹象农场：触发一次记一个 id，世界层按它过滤，
+  // 单周目清零口径与 `logsFound` 一致（`startNextCycle` 重置）。
 };
 
 // ───────────────────────── v1 ⇄ v2 适配（唯一的类型边界） ─────────────────────────
@@ -124,6 +129,11 @@ function fromCore(
     // 漏一个就静默丢数据 —— 这条是 web 侧存档字段的通用规矩。
     crafts: next.crafts,
     logsFound: next.logsFound,
+    // 探索动机改版：剧本种子驱动当周的「远处的迹象」抽取。
+    // 0 = 老档 / 无种子 → 无迹象（走固定剧本，不破坏既有体验）。
+    runSeed: next.runSeed,
+    // 探索动机改版（防迹象农场）：本局已触发的迹象 id 跟着 core 状态走。
+    signsFound: next.signsFound,
     accidents: next.accidents,
     log: next.log,
     ending: next.ending,
@@ -210,6 +220,35 @@ function readLogsFound(raw: unknown): string[] {
   return out;
 }
 
+/**
+ * 读档归一化：剧本种子（探索动机改版 · 迹象系统）。
+ *
+ * 口径与 core 的 `drawSigns` 对齐：**非正数 / 坏形状 → 0**，
+ * 0 = 老档无迹象（走固定剧本，不破坏既有体验）。正数向下取整。
+ */
+function readRunSeed(raw: unknown): number {
+  if (typeof raw !== 'number' || !Number.isFinite(raw) || raw <= 0) return 0;
+  return Math.floor(raw);
+}
+
+/**
+ * 读档归一化：已触发的迹象 id（探索动机改版 · 防迹象农场）。
+ *
+ * 只保留 `SIGNS` 里真实存在的 id —— 存档可能被手改过，
+ * 假 id 会让世界层渲染不出东西、`triggerSign` 也对不上账。
+ */
+function readSignsFound(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return [];
+  const out: string[] = [];
+  for (const id of raw) {
+    if (typeof id !== 'string') continue;
+    if (!SIGNS.some((s) => s.id === id)) continue;
+    if (out.includes(id)) continue;
+    out.push(id);
+  }
+  return out;
+}
+
 /** 状态机推进。已在 free 的不动；craft 一刀切到 free */
 function advanceTutorial(t: TutorialState, on: 'move' | 'pickup' | 'craft'): TutorialState {
   if (t.step === 'free') return t;
@@ -279,6 +318,10 @@ function readSavedGame(): SaveStateV2 | null {
       // 归一化：老存档没有 logsFound 字段 → 空数组。
       // 只保留真实存在的日志 id，去重。
       logsFound: readLogsFound(parsed.logsFound),
+      // 归一化：老存档没有 runSeed / signsFound（探索动机改版）→ 0 / 空。
+      // runSeed = 0 = 老档无迹象，走固定剧本。
+      runSeed: readRunSeed(parsed.runSeed),
+      signsFound: readSignsFound(parsed.signsFound),
       // 归一化：老存档没有 built（落地成景记录）→ 空数组。
       built: Array.isArray(parsed.built)
         ? parsed.built.filter((id): id is string => typeof id === 'string')
@@ -396,6 +439,17 @@ interface GameStore {
    */
   archiveLogsFound: string[];
 
+  /**
+   * 「见过的东西」的只读镜像（探索动机改版 · 图鉴「没见过的东西」用）。
+   *
+   * `SaveState.discovered` 是**单周目**字段（开新周目清零），
+   * 而图鉴要回答的是「这东西你见过没见过」——跨周目的「这辈子见过」
+   * 在 core 没有字段承载（不做 schema 变更），所以这里给一个
+   * **上一次存档**的镜像：主菜单打开图鉴时看到的是上次存档的真实情况，
+   * 与 `archiveLogsFound` 同口径（commit 同步、resetAll 清空）。
+   */
+  archiveDiscovered: Record<string, boolean>;
+
   // ── UI 状态（不持久化）──
   slots: [string | null, string | null];
   toast: ToastData | null;
@@ -417,6 +471,15 @@ interface GameStore {
   tutorFlags: { wrong: boolean; blocked: boolean };
   /** 世界线邀请已播过的线 id（瞬态，不入存档）。刷新后可重来一次，可接受 */
   invitesSeen: string[];
+  /**
+   * 本周目已经「台词汇过」的迹象 id（瞬态，不入存档）。
+   *
+   * 与 `save.signsFound`（已触发，入存档）分工：前者防的是
+   * 「同一条迹象台词每天刷屏」（窗口期内每天合成都汇一句），
+   * 后者记的是「奖励已拿」。刷新后前者清零 → 可能重汇一次，可接受
+   * （与 `invitesSeen` 同口径）。
+   */
+  signsSeen: string[];
   /**
    * 当前「走近」的那件地面物品（UI 批次 · 分区改版：信息卡数据源，瞬态不入存档）。
    * 由 `WorldCanvas` 的 `onFocusItem` 上报——走近新物品 / 走开 / 捡完都会更新。
@@ -455,10 +518,22 @@ interface GameStore {
   drop: (id: string) => void;
   refreshWorld: () => void;
 
+  /**
+   * 探索动机改版：触发一处「远处的迹象」（世界层点中时调用）。
+   *
+   * - 窗口外 / 已触发 / 奖励拿不下 → 静默拒绝（迹象留在地图上）；
+   * - 成功 → 发奖励（现有 base 物品）、记 `signsFound`、台词汇 hintText。
+   */
+  triggerSign: (signId: string) => void;
+
   toggleSlot: (id: string) => void;
   clearSlot: (index: number) => void;
   doLaunch: () => void;
   chooseEnding: (ending: EndingId) => void;
+  /** R3 反悔出口：结局页「再逛逛，先不收摊」→ 回游戏（结局已记档，可再从 HUD 回结局页） */
+  dismissEnding: () => void;
+  /** R3：HUD「结局」入口 —— 回到结局页（`save.ending` 非空时才显示） */
+  showEnding: () => void;
 
   advanceDialog: () => void;
   say: (text: string[]) => void;
@@ -533,7 +608,40 @@ export const useGame = create<GameStore>((set, get) => {
       archive: save.ngPlus,
       archiveKeepsakes: save.keepsakes,
       archiveLogsFound: save.logsFound,
+      archiveDiscovered: save.discovered,
       ...extra,
+    });
+  };
+
+  /**
+   * 结局后回到星球（不清档）。
+   *
+   * 两个入口共用：
+   * - `continueAfterEnding`：stay / free 结局页的「留在这里继续」；
+   * - `dismissEnding`（R3 反悔出口）：任何结局页的「再逛逛，先不收摊」。
+   *
+   * core 的 `continueAfterEnding` 只清 `ending`，其余全留 ——
+   * 所以 `built` 必须显式带出（`fromCore` 逐字段列举，漏一个就静默丢数据；
+   * `built` 曾经就在这丢过）。`signsFound` 走 core 字段自动带出。
+   */
+  const backToGameAfterEnding = () => {
+    const { save } = get();
+    const next = fromCore(
+      coreContinueAfterEnding(toCore(save)),
+      save.world,
+      save.tutorial,
+      save.built,
+    );
+    commit(next, {
+      screen: 'game',
+      slots: [null, null],
+      viewing: null,
+      bagOpen: false,
+      logOpen: false,
+      codexOpen: false,
+      ngPlusConfirmOpen: false,
+      dialog: [],
+      dialogIndex: 0,
     });
   };
 
@@ -543,6 +651,7 @@ export const useGame = create<GameStore>((set, get) => {
     archive: boot?.ngPlus ?? createNgPlus(),
     archiveKeepsakes: boot?.keepsakes ?? [],
     archiveLogsFound: boot?.logsFound ?? [],
+    archiveDiscovered: boot?.discovered ?? {},
     screen: 'start',
     slots: [null, null],
     toast: null,
@@ -555,6 +664,7 @@ export const useGame = create<GameStore>((set, get) => {
     ngPlusConfirmOpen: false,
     tutorFlags: { wrong: false, blocked: false },
     invitesSeen: [],
+    signsSeen: [],
     focusItem: null,
     recentCrafts: [],
 
@@ -586,6 +696,11 @@ export const useGame = create<GameStore>((set, get) => {
       //
       // 同理读 `archiveKeepsakes` 而不是 `save.keepsakes`（主菜单时后者是空的）。
       base.keepsakes = get().archiveKeepsakes;
+      // 探索动机改版：每一局一个**随机剧本种子**（治「每局内容相同」）。
+      // `Math.random` 只允许出现在 web 层 —— game-core 无 IO 铁律管不到这里，
+      // core 侧的二周目派生（`deriveRunSeed`）是确定性的，两边分工明确。
+      // 取 [1, 0x7fffffff]，与 core 派生值同量级；`|| 1` 防 0（0 = 老档无迹象）。
+      base.runSeed = (Math.random() * 0x7fffffff) >>> 0 || 1;
       const world = redistribute(fromCore(base, [], TUTORIAL_SKIP), spawn, DEFAULT_MAX_DIST);
       const save: SaveStateV2 = fromCore(base, world, { step: 'newcomer', picks: 0 });
       persist(save);
@@ -610,6 +725,7 @@ export const useGame = create<GameStore>((set, get) => {
         archive: base.ngPlus,
         archiveKeepsakes: base.keepsakes,
         archiveLogsFound: base.logsFound,
+        archiveDiscovered: base.discovered,
         // 二周目玩家重开 → 播二周目开场（GDD §7.2「回到第 1 天」）。
         dialog: save.ngPlus.cycle >= 2 ? lines('ngplus') : lines('start'),
         dialogIndex: 0,
@@ -620,6 +736,7 @@ export const useGame = create<GameStore>((set, get) => {
         ngPlusConfirmOpen: false,
         tutorFlags: { wrong: false, blocked: false },
         invitesSeen: [],
+        signsSeen: [],
         focusItem: null,
         recentCrafts: [],
         player: spawn,
@@ -642,6 +759,7 @@ export const useGame = create<GameStore>((set, get) => {
         archive: save.ngPlus,
         archiveKeepsakes: save.keepsakes,
         archiveLogsFound: save.logsFound,
+        archiveDiscovered: save.discovered,
         screen: 'game',
         slots: [null, null],
         dialog:
@@ -653,6 +771,8 @@ export const useGame = create<GameStore>((set, get) => {
         bagOpen: false,
         logOpen: false,
         tutorFlags: { wrong: false, blocked: false },
+        invitesSeen: [],
+        signsSeen: [],
         focusItem: null,
         recentCrafts: [],
         player: spawn,
@@ -838,6 +958,7 @@ export const useGame = create<GameStore>((set, get) => {
         advanceTutorial(save.tutorial, 'craft'),
         // 落地成景（乐趣改版 ⑤）：产物是纪念物 / 飞船部件 → 记入 built
         markBuilt(save.built, output.id),
+        // 迹象触发状态（`signsFound`）由 core 状态自动带出 —— 合成不动它
       );
       if (next.day === 7) {
         next = {
@@ -858,15 +979,36 @@ export const useGame = create<GameStore>((set, get) => {
         dialog = [...dialog, ...lines('day100')];
       }
 
-      // 支线达成
-      if (next.stage === 3) {
+      // 支线达成播报（A3 B-soft：stage >= 2 即可达成；ship 仍锁 stage 3）
+      //
+      // core 的 `craft()` 已按同口径写 `branches`（ship 只在 stage 3 判定），
+      // 这里只负责「播报」——所以也要重复一次 ship 的阶段门：
+      // 阶段 2 的包里四件套齐了，`allBranchStatus` 会说 ship done，
+      // 但 core 没有写 `branches.ship` → 不过滤就会误播「飞船线成了」。
+      if (next.stage >= 2) {
         const newlyDone = allBranchStatus(next.bag).filter(
-          (s) => s.done && !save.branches[s.id],
+          (s) =>
+            s.done &&
+            !save.branches[s.id] &&
+            (s.id !== 'ship' || next.stage >= 3),
         );
         if (newlyDone.length > 0) {
           const branch = BRANCHES.find((x) => x.id === newlyDone[0]!.id)!;
           dialog = [...dialog, `「${branch.name}」成了。${branchSummary(branch.id)}`];
         }
+      }
+
+      // 迹象提示（探索动机改版）：今天的窗口里有没触发过的迹象 → 台词汇一句。
+      // 台词本身就是引子（「远处有东西」），不剧透位置——位置在世界层自己看。
+      // `signsSeen` 瞬态去重：窗口期内每天合成都汇同一句是噪音；
+      // 刷新后可重汇一次，可接受（与 invitesSeen 同口径）。
+      const todaysSigns = signsForDay(next.runSeed, next.day);
+      const freshSign = todaysSigns.find(
+        (s) => !next.signsFound.includes(s.id) && !get().signsSeen.includes(s.id),
+      );
+      if (freshSign) {
+        dialog = [...dialog, freshSign.hintText];
+        set({ signsSeen: [...get().signsSeen, freshSign.id] });
       }
 
       // 世界线邀请：合成让某条线的倾向值过阈值时，AI 给一句方向性提示。
@@ -905,12 +1047,61 @@ export const useGame = create<GameStore>((set, get) => {
       commit({ ...save, world });
     },
 
+    /**
+     * 触发一处「远处的迹象」（世界层点中时调用）。
+     *
+     * 四条拒绝路径都是**静默**的（迹象留在地图上，玩家腾出手/找对天再来）：
+     * 1. id 不在池里（手改的存档 / 串档）；
+     * 2. 已触发过（`signsFound` 记着 —— 防迹象农场：同一条不重复发奖）；
+     * 3. 不在窗口期（世界层只渲染当天的，这里是防御）；
+     * 4. 奖励拿不下（满包）→ 弹一次 toast 说明原因。
+     *
+     * 奖励全是现有 base 物品（core 池子口径），顺手写 `discovered` ——
+     * 图鉴的「没见过的东西」计数要以它为准。
+     */
+    triggerSign: (signId) => {
+      const { save } = get();
+      const sign = SIGNS.find((s) => s.id === signId);
+      if (!sign) return;
+      if (save.signsFound.includes(signId)) return;
+      if (save.day < sign.minDay || save.day > sign.maxDay) return;
+      // 满包：整个迹象不触发（宁可留着，也不能发一半奖）
+      if (!sign.reward.every((id) => canTake(save.bag, id))) {
+        get().showToast('背包满了', '10 格装满了。合成掉或者扔掉一些，再来收迹象。');
+        return;
+      }
+
+      let bag = save.bag;
+      for (const id of sign.reward) bag = addItem(bag, id);
+      const discovered = { ...save.discovered };
+      for (const id of sign.reward) discovered[id] = true;
+
+      const next: SaveStateV2 = {
+        ...save,
+        bag,
+        discovered,
+        signsFound: [...save.signsFound, signId],
+        log: appendLog(save.log, {
+          day: save.day,
+          kind: '系统',
+          text: `远处的迹象：${sign.hintText}`,
+        }),
+      };
+      // 台词就是迹象自己的那一句——走近看时的「揭晓」与提示音是同一句
+      commit(next, { dialog: [sign.hintText] });
+    },
+
     /** 扔掉一整叠（乐趣改版 ①）。不耗天数；built 不动——造过的东西痕迹还在 */
     drop: (id) => {
       const { save } = get();
       const nextCore = coreDropItem(toCore(save), id);
       if (!nextCore) return;
-      const next = fromCore(nextCore, save.world, save.tutorial, save.built);
+      const next = fromCore(
+        nextCore,
+        save.world,
+        save.tutorial,
+        save.built,
+      );
       commit(next, { slots: slotsWithout(next.bag, get().slots) });
     },
 
@@ -965,7 +1156,12 @@ export const useGame = create<GameStore>((set, get) => {
       if (mode === 'none') return;
 
       const res = attemptLaunch(toCore(save));
-      const next = fromCore(res.state, save.world, save.tutorial, save.built);
+      const next = fromCore(
+        res.state,
+        save.world,
+        save.tutorial,
+        save.built,
+      );
       if (res.ok) {
         commit(next, { screen: 'ending', dialog: lines('launchSuccess'), dialogIndex: 0 });
       } else {
@@ -977,12 +1173,23 @@ export const useGame = create<GameStore>((set, get) => {
     chooseEnding: (ending) => {
       const { save } = get();
       commit(
-        fromCore(finishGame(toCore(save), ending), save.world, save.tutorial, save.built),
+        fromCore(
+          finishGame(toCore(save), ending),
+          save.world,
+          save.tutorial,
+          save.built,
+        ),
         {
           screen: 'ending',
         },
       );
     },
+
+    /** R3 反悔出口：「再逛逛，先不收摊」——结局已记档，回星球接着过 */
+    dismissEnding: backToGameAfterEnding,
+
+    /** R3：HUD「结局」入口——回到结局页（save.ending 非空时才显示这个 chip） */
+    showEnding: () => set({ screen: 'ending' }),
 
     advanceDialog: () => {
       const { dialogIndex, dialog } = get();
@@ -1058,7 +1265,10 @@ export const useGame = create<GameStore>((set, get) => {
     startNewCycle: () => {
       const { save, player, viewportHalf, zoom } = get();
       const nextCore = coreStartNextCycle(toCore(save));
-      // 新周目：世界进度清零，落地成景也一起清（重新降落，坠毁点重新开始）
+      // 新周目：世界进度清零，落地成景也一起清（重新降落，坠毁点重新开始）；
+      // 迹象状态同样清零 —— `coreStartNextCycle` 已派生新的 `runSeed`
+      // 并把 `signsFound` 置空（守恒清单里有「这一局撞见的迹象」一条），
+      // 旧周目触发过的迹象 id 对新剧本没有意义。
       let next = fromCore(nextCore, save.world, save.tutorial, []);
       const world = redistribute(next, player, viewportHalf / zoom);
       next = { ...next, world };
@@ -1075,6 +1285,7 @@ export const useGame = create<GameStore>((set, get) => {
         // 新周目 = 重新降落：产物架与走近信息卡都清空
         recentCrafts: [],
         focusItem: null,
+        signsSeen: [],
       });
       // 「开新周目」也是一次**世界归零**，所以同样要处理云端旧档。
       //
@@ -1095,22 +1306,11 @@ export const useGame = create<GameStore>((set, get) => {
      * ⚠️ **不能用 `resetAll`**：`resetAll` 会 `localStorage.removeItem` +
      * `clearCloudSave` + 重建初始 state，把 `ngPlus` 档案和 `keepsakes` 一起清掉。
      * 这里只清 `ending`（core 的 `continueAfterEnding`），其余全留。
+     *
+     * 与 `dismissEnding`（R3 反悔出口）同一实现 —— 两个入口的行为
+     * 本来就该一致：「结局记档，人回星球」。
      */
-    continueAfterEnding: () => {
-      const { save } = get();
-      const next = fromCore(coreContinueAfterEnding(toCore(save)), save.world, save.tutorial);
-      commit(next, {
-        screen: 'game',
-        slots: [null, null],
-        viewing: null,
-        bagOpen: false,
-        logOpen: false,
-        codexOpen: false,
-        ngPlusConfirmOpen: false,
-        dialog: [],
-        dialogIndex: 0,
-      });
-    },
+    continueAfterEnding: backToGameAfterEnding,
 
     /**
      * 标记一篇日志「已读」。写进 `ngPlus.readLogs`（跨周目保留）。
@@ -1163,6 +1363,7 @@ export const useGame = create<GameStore>((set, get) => {
                 archive: normalized.ngPlus,
                 archiveKeepsakes: normalized.keepsakes,
                 archiveLogsFound: normalized.logsFound,
+                archiveDiscovered: normalized.discovered,
               });
               get().showToast('已从云端同步');
             }
@@ -1181,6 +1382,7 @@ export const useGame = create<GameStore>((set, get) => {
                 archive: normalized.ngPlus,
                 archiveKeepsakes: normalized.keepsakes,
                 archiveLogsFound: normalized.logsFound,
+                archiveDiscovered: normalized.discovered,
               });
               get().showToast('已从云端同步');
             }
@@ -1210,6 +1412,7 @@ export const useGame = create<GameStore>((set, get) => {
         archive: createNgPlus(),
         archiveKeepsakes: [],
         archiveLogsFound: [],
+        archiveDiscovered: {},
         world: [],
         screen: 'start',
         slots: [null, null],
@@ -1220,6 +1423,8 @@ export const useGame = create<GameStore>((set, get) => {
         bagOpen: false,
         logOpen: false,
         tutorFlags: { wrong: false, blocked: false },
+        invitesSeen: [],
+        signsSeen: [],
         player: spawn,
         spawn,
         moveTarget: null,

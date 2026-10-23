@@ -20,10 +20,15 @@
  * - QA3 老存档三形态（`ngPlus` 缺失 / `false` / `true`）读档归一化，
  *   且 web 与 api 对同一输入算出同一个 progressScore
  * - QA4 「留在这里继续」：清 `ending`、保留 `keepsakes` / `ngPlus` / `branches`，
- *   且**不调用 `localStorage.removeItem`**（= 没有走 `resetAll`）
+ *   且**不调用 `localStorage.removeItem`**（= 没有走 `resetAll`）；
+ *   `built` / `runSeed` / `signsFound` 在「回星球」路径上原样往返
+ *   （`fromCore` 漏带 `built` 曾把落地成景清空 —— 回归护栏；
+ *   `dismissEnding` 与 `continueAfterEnding` 同一实现，同路径再断言一组）
+ * - `readSignsFound` 读档归一化：假 id / 重复 / 非字符串一律滤掉
  * - QA6 `readLog` 幂等：已读再点不产生多余的云端推送
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { SaveStateV2 } from '../../web/src/store/gameStore.js';
 
 // ── localStorage 桩（web 的 store 直接用全局 localStorage）──
 const ls = new Map<string, string>();
@@ -208,6 +213,64 @@ describe('QA4「留在这里继续」保留档案，不走 resetAll', () => {
     expect(after.save.ngPlus.cycle).toBe(2);
     expect(after.save.branches.stay).toBe(true);
     expect(removed, '「留在这里继续」不得调用 localStorage.removeItem（= 不得走 resetAll）').toBe(0);
+  });
+
+  it('continueAfterEnding 与 dismissEnding 都不丢 built / runSeed / signsFound', async () => {
+    const useGame = await freshStore();
+    useGame.getState().newGame();
+
+    // 伪造「已达成 stay 结局」且带落地成景 / 剧本种子 / 已触发迹象的存档
+    const withStayEnding = (base: SaveStateV2): SaveStateV2 => ({
+      ...base,
+      ending: 'stay',
+      keepsakes: ['ks_stay'],
+      branches: { ...base.branches, stay: true },
+      ngPlus: { cycle: 2, endings: ['stay'], readLogs: [], branchesHistory: ['stay'] },
+      built: ['wire'],
+      runSeed: 4242,
+      signsFound: ['sign_light'],
+    });
+
+    /** 两个入口共用 backToGameAfterEnding，断言口径完全一致 */
+    const expectBackOnPlanet = () => {
+      const after = useGame.getState();
+      expect(after.save.ending).toBeNull();
+      expect(after.save.keepsakes).toEqual(['ks_stay']);
+      expect(after.save.ngPlus.endings).toEqual(['stay']);
+      expect(after.save.ngPlus.cycle).toBe(2);
+      expect(after.save.branches.stay).toBe(true);
+      // built 回归护栏：修前 fromCore 逐字段列举漏带 built，
+      // 「回星球」会把它清成 []（落地成景整局痕迹丢掉）
+      expect(after.save.built).toEqual(['wire']);
+      // runSeed / signsFound 走 core 字段往返 —— 这条路径此前零覆盖
+      expect(after.save.runSeed).toBe(4242);
+      expect(after.save.signsFound).toEqual(['sign_light']);
+    };
+
+    // 入口一：continueAfterEnding（stay / free 结局页「留在这里继续」）
+    useGame.setState({ save: withStayEnding(useGame.getState().save) });
+    useGame.getState().continueAfterEnding();
+    expectBackOnPlanet();
+
+    // 入口二：dismissEnding（R3 反悔出口「再逛逛，先不收摊」）—— 同一实现，同一条路径
+    useGame.setState({ save: withStayEnding(useGame.getState().save) });
+    useGame.getState().dismissEnding();
+    expectBackOnPlanet();
+  });
+});
+
+describe('readSignsFound 归一化（假 id / 重复 / 非字符串）', () => {
+  beforeEach(() => ls.clear());
+
+  it('signsFound 只保留真实 id、去重、剔除非字符串', async () => {
+    // 手改存档：重复的真实 id + 假 id + 非字符串混在一起
+    ls.set(
+      'haola.save.v2',
+      JSON.stringify(baseSave({ signsFound: ['sign_light', 'sign_light', 'sign_fake', 42] })),
+    );
+    const useGame = await freshStore();
+    expect(useGame.getState().continueGame()).toBe(true);
+    expect(useGame.getState().save.signsFound).toEqual(['sign_light']);
   });
 });
 

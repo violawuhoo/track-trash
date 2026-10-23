@@ -11,7 +11,6 @@ import {
   getItem,
   getStage,
   missingAreaHints,
-  missingForBag,
   pairingExample,
   type Progress,
 } from '@haola/game-core';
@@ -36,14 +35,18 @@ export function HintBar() {
   const cycle = useGame((s) => s.save.ngPlus.cycle);
   const [open, setOpen] = useState(false);
 
-  // 由签名重建「仅成员关系」的 bag：bagHasTag / missingForBag 只看 count>0、不关心具体数量
-  // （见 packages/game-core/src/search.ts），故把每个持有 id 归一为 1 即可，无需订阅 bag 对象引用
-  // （订阅引用就是掉帧元凶）。heldSig 为空串（无任何物品）时给空对象，避免 split 出 spurious '' 键。
+  // 由签名重建「仅成员关系」的 bag：bagHasTag / missingAreaHints 只看 count>0、
+  // 不关心具体数量（见 packages/game-core/src/search.ts），故把每个持有 id
+  // 归一为 1 即可，无需订阅 bag 对象引用（订阅引用就是掉帧元凶）。
+  // heldSig 为空串（无任何物品）时给空对象，避免 split 出 spurious '' 键。
   //
   // 性能铁律（POLISH-HUD-1）：订阅的是 heldSig（string，Object.is 去重），不是 bag 对象引用。
   // 所以下面所有派生计算统一挂在 useMemo 上，依赖 [heldSig, stage, stepIndex]，
   // 只有「持有成员关系」或「阶段进度」真的变了才重算。
-  const { bag, missing, hints, stageDef, step } = useMemo(() => {
+  //
+  // A5 提示降噪后 `missing`（缺什么）不再进默认 chip，只在展开面板用
+  // `hints`（跨区域指路）—— 所以这里不再单独返回 missing 列表。
+  const { bag, hints, stageDef, step } = useMemo(() => {
     const bag: Record<string, number> = heldSig
       ? Object.fromEntries(heldSig.split(',').map((id): [string, number] => [id, 1]))
       : {};
@@ -51,7 +54,6 @@ export function HintBar() {
     const stageDef = getStage(stage as 1 | 2 | 3);
     return {
       bag,
-      missing: missingForBag(progress, bag).slice(0, 2),
       // 跨区域提示：缺的东西去哪个区域找。v2 没有「搜索」按钮，
       // 这个提示是玩家唯一能看到的「去哪找」指引。
       hints: missingAreaHints(progress, bag),
@@ -65,14 +67,15 @@ export function HintBar() {
   if (tutorialStep !== 'free') return null;
 
   /**
-   * headline。
+   * headline（A5 提示降噪 · 探索动机改版）。
    *
-   * 阶段 3 现在是**三步目标链**（不再是「凑一条三件套」），所以 headline 必须
-   * 反映步骤进度：第 N 步 / 共 3 步。缺标签部分仍要显示（那是玩家最需要的
-   * 一行字），拼成「第 N 步 / 共 3 步 · 缺：金属 / 能烧」。
+   * 改版前默认态拼的是「缺：能粘的东西 / 知识」——左下角常年挂着一行
+   * 「你还缺什么」的唠叨。降噪口径：**默认 chip 只报进度**
+   * （阶段名 + 第 N 步 / 共 M 步），「缺什么、去哪找」收进展开面板，
+   * 想看的人点一下就有，不想看的人左下角是干净的。
    *
-   * 走满三步后 buildDone = true、stepIndex = 3（= steps.length），
-   * 此时 missingForBag 返回空、当前步骤不存在，headline 走「建设期完成」分支。
+   * 阶段 3 走满后 buildDone = true、stepIndex = 3（= steps.length），
+   * 此时没有「当前步骤」，headline 走「建设期完成」分支。
    */
   const stage3StepTotal = stageDef?.steps.length ?? 0;
   // 完成判据取或：buildDone 是 core 写的权威位；但老档 / 异常路径下
@@ -82,16 +85,11 @@ export function HintBar() {
   const stage3Done = buildDone || stepIndex >= stage3StepTotal;
   // 步号 clamp：stepIndex 走到 steps.length 之后不能显示「第 4 步」。
   const shownStep = Math.min(stepIndex + 1, stage3StepTotal);
+  const stageName = stageDef?.name ?? `阶段 ${stage}`;
   const headline =
-    stage === 3
-      ? stage3Done
-        ? '建设期完成 · 三样都造出来了'
-        : missing.length > 0
-          ? `第 ${shownStep} 步 / 共 ${stage3StepTotal} 步 · 缺：${missing.join(' / ')}`
-          : `第 ${shownStep} 步 / 共 ${stage3StepTotal} 步`
-      : missing.length > 0
-        ? `缺：${missing.join(' / ')}`
-        : '齐了，放进合成台试试';
+    stage === 3 && stage3Done
+      ? '建设期完成 · 三样都造出来了'
+      : `${stageName} · 第 ${shownStep} 步 / 共 ${stage3StepTotal} 步`;
 
   return (
     <div className="hint">
@@ -111,6 +109,9 @@ export function HintBar() {
         <div className="hint__panel">
           {stageDef && step ? (
             <>
+              {/* A5 提示降噪：默认 chip 只报进度，「这一步要什么」在这里
+                  用一句完整的话说清（标签对 + 具体名字），不用去读标签云。 */}
+              <div className="hint__need">这一步要：{step.requires.join(' + ')}</div>
               <div className="hint__step">
                 第 {stepIndex + 1} 步 / 共 {stageDef.steps.length} 步
               </div>

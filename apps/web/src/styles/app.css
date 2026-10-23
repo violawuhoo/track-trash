@@ -436,6 +436,16 @@ button:focus:not(:focus-visible) {
   margin-bottom: var(--sp-1);
 }
 
+/* A5 提示降噪：展开面板顶部的「这一步要：A + B」完整句 */
+.hint__need {
+  font-size: var(--fs-sm);
+  font-weight: 800;
+  line-height: var(--lh-body);
+  margin-bottom: var(--sp-2);
+  padding-bottom: var(--sp-2);
+  border-bottom: var(--stroke-thin) solid var(--rule);
+}
+
 .hint__blurb {
   color: var(--ink-soft);
   line-height: var(--lh-body);
@@ -1271,6 +1281,16 @@ button:focus:not(:focus-visible) {
   color: var(--ink-soft);
 }
 
+/* R3 反悔出口的确认文案：结局已记档的「定心丸」，
+   比 stats 再弱一档（次要色 + 正文小字），不抢按钮的注意力 */
+.ending__regret {
+  max-width: 340px;
+  margin: 0 auto;
+  font-size: var(--fs-xs);
+  color: var(--ink-faint);
+  line-height: var(--lh-body);
+}
+
 /* ═══════════════════ 前任日志面板（C1 批次） ═══════════════════ */
 
 /* HUD「记录」按钮。视觉与背包按钮同族，热区靠 ::after 补到 44px */
@@ -1699,6 +1719,53 @@ button:focus:not(:focus-visible) {
 
 .codex__logbody {
   margin-top: var(--sp-2);
+}
+
+/* ── 没见过的东西（探索动机改版）──
+   ??? 剪影格子：虚线框 + 反色问号，比「墨黑剪影」再弱一档 ——
+   这东西不但没见过，连「是什么」都不知道。40×40 与日志行高对齐，
+   大 tile 档（56×56 / 26px）供将来发现态小图标复用。 */
+.codex__unknowns {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, 40px);
+  gap: var(--sp-2);
+}
+
+.codex__unknown {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border: var(--stroke-thin) dashed var(--ink-faint);
+  border-radius: var(--radius-md);
+  background: transparent;
+}
+
+.codex__unknown::before {
+  content: '?';
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 800;
+  font-style: italic;
+  line-height: 1;
+  color: var(--ink-faint);
+}
+
+/* 大 tile 档（后续「发现态小图标」用；本批只有 ??? 占位） */
+.codex__unknown--lg {
+  width: 56px;
+  height: 56px;
+}
+
+.codex__unknown--lg::before {
+  font-size: 26px;
+}
+
+.codex__allseen {
+  margin: 0;
+  font-size: var(--fs-sm);
+  color: var(--ink-soft);
+  line-height: var(--lh-body);
 }
 
 .codex__logpuzzle {

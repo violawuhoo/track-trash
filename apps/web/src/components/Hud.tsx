@@ -46,6 +46,10 @@ export function Hud() {
   const setZoom = useGame((s) => s.setZoom);
   const toggleBag = useGame((s) => s.toggleBag);
   const toggleLog = useGame((s) => s.toggleLog);
+  // R3 反悔出口的回路：本局撞过结局（save.ending 非空）→ HUD 常驻「结局」入口，
+  // 从星球上随时能回结局页。没有结局时不显示（回哪去）。
+  const ending = useGame((s) => s.save.ending);
+  const showEnding = useGame((s) => s.showEnding);
 
   return (
     <header className="hud">
@@ -81,6 +85,19 @@ export function Hud() {
             +
           </button>
         </div>
+
+        {/* R3：结局入口。视觉与「记录」同族（hud__log），无计数徽标——
+            它是一个「门」，不是一摞待处理项 */}
+        {ending && (
+          <button
+            type="button"
+            className="hud__log"
+            onClick={showEnding}
+            aria-label="回到结局页"
+          >
+            <span className="hud__baglabel">结局</span>
+          </button>
+        )}
 
         <button
           type="button"

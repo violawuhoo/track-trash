@@ -40,6 +40,11 @@ export const SaveStateSchema = z
     // 可选：老存档没有这两个键，别让老档传不上去。
     crafts: z.number().optional(),
     logsFound: z.array(z.string()).optional(),
+    // 探索动机改版：剧本种子（驱动「远处的迹象」抽取）+ 本局已触发的迹象 id。
+    // 与 C1 同口径：老存档没有这两个键 → 可选放行（读档归一化在 web 侧做）。
+    // `signsFound` 是防迹象农场的依据，丢了它已触发的迹象会重新可点。
+    runSeed: z.number().optional(),
+    signsFound: z.array(z.string()).optional(),
     // C2 批次：二周目档案容器（cycle / endings / readLogs / branchesHistory）。
     //
     // 两种形态都要放行：

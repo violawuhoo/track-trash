@@ -21,9 +21,10 @@
  *    世界层靠引用比较决定是否同步。
  */
 import { useEffect, useMemo, useRef } from 'react';
-import { lines, type AreaId } from '@haola/game-core';
+import { SIGNS, layoutSigns, lines, type AreaId } from '@haola/game-core';
 import { lockedAreasFor, useGame } from '../store/gameStore';
 import { WorldCanvas } from '../world/WorldCanvas';
+import type { SignView } from '../world/signs';
 import { rocketSlots, builtProps } from '../lib/monuments';
 import { Hud } from '../components/Hud';
 import { HintBar } from '../components/HintBar';
@@ -91,12 +92,16 @@ export function GameScreen() {
   const stage = useGame((s) => s.save.stage);
   const bag = useGame((s) => s.save.bag);
   const built = useGame((s) => s.save.built);
+  const day = useGame((s) => s.save.day);
+  const runSeed = useGame((s) => s.save.runSeed);
+  const signsFound = useGame((s) => s.save.signsFound);
   const dialog = useGame((s) => s.dialog);
   const dialogIndex = useGame((s) => s.dialogIndex);
 
   const setMoveTarget = useGame((s) => s.setMoveTarget);
   const setPlayerPos = useGame((s) => s.setPlayerPos);
   const collect = useGame((s) => s.collect);
+  const triggerSign = useGame((s) => s.triggerSign);
   const setFocusItem = useGame((s) => s.setFocusItem);
   const say = useGame((s) => s.say);
   const setViewportHalf = useGame((s) => s.setViewportHalf);
@@ -133,6 +138,32 @@ export function GameScreen() {
     }),
     [bag, built],
   );
+
+  /**
+   * 「远处的迹象」（探索动机改版）：当周窗口内的迹象摆放点。
+   *
+   * - `runSeed <= 0`（老档 / 无种子）→ 空数组：走固定剧本，无迹象；
+   * - **已触发过的不再显示**（拍板口径：一行过滤胜过「只给台词」的半边实现，
+   *   也顺头堵死同一条迹象每天重复点名的农场路径；meteor 无奖励同口径）；
+   * - 只进已解锁扇区（`layoutSigns` 的 areas 参数；ART-01 交接项 ③：
+   *   烟墨黑 35–50% 压进未解锁雾障里会直接消失，看不见的点了也白点）。
+   *
+   * memo 依赖全是标量 / 稳定引用：day 每次合成才变，signsFound 只在触发时换数组。
+   */
+  const signs = useMemo(() => {
+    if (runSeed <= 0) return [];
+    const unlocked = (['crash', 'junkyard', 'market', 'cave'] as AreaId[]).filter(
+      (a) => !lockedAreas.includes(a),
+    );
+    const views: SignView[] = [];
+    for (const spot of layoutSigns(runSeed, day, unlocked)) {
+      if (signsFound.includes(spot.id)) continue;
+      const def = SIGNS.find((s) => s.id === spot.id);
+      if (!def) continue;
+      views.push({ id: spot.id, x: spot.x, y: spot.y, kind: def.kind });
+    }
+    return views;
+  }, [runSeed, day, signsFound, lockedAreas]);
 
   /**
    * `viewportHalf`：屏幕短边一半（CSS px）。
@@ -175,8 +206,10 @@ export function GameScreen() {
           zoom={zoom}
           lockedAreas={lockedAreas}
           monuments={monuments}
+          signs={signs}
           onMoveTo={setMoveTarget}
           onCollect={collect}
+          onTriggerSign={triggerSign}
           onFocusItem={setFocusItem}
           onPlayerPos={setPlayerPos}
           onAreaBlocked={onAreaBlocked}
